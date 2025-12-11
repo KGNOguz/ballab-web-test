@@ -96,6 +96,12 @@
             </nav>
              <div id="sidebar-categories" class="pt-6 border-t border-gray-100 dark:border-gray-800"></div>
         </div>
+        <div class="p-6 border-t border-gray-100 dark:border-gray-800">
+             <div class="flex gap-4 justify-center opacity-50">
+                <!-- Sidebar Footer BAL Logo -->
+                <img src="/resources/bal-logo.png" alt="BAL" class="w-8 h-8 opacity-50 hover:opacity-100 transition-opacity dark:invert object-contain">
+             </div>
+        </div>
     </aside>
 
     <!-- School Content -->
@@ -176,46 +182,55 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pt-16 pb-8 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12">
+    <footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pt-16 pb-12 mt-auto transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
             <!-- Left: Brand & Social -->
-            <div class="space-y-6">
-                <h2 class="text-5xl font-serif font-black tracking-tighter text-ink dark:text-white">Ballab</h2>
-                <p class="text-sm text-gray-500 max-w-xs">
-                    © Ballab 2025 ve Bursa Anadolu Lisesi. Tüm hakları saklıdır.
-                </p>
-                <div class="flex gap-4">
-                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Instagram</a>
-                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Twitter</a>
-                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Facebook</a>
+            <div class="flex flex-col items-center md:items-start text-center md:text-left space-y-6">
+                <div>
+                    <h2 class="text-5xl font-serif font-black tracking-tighter text-ink dark:text-white mb-2">Ballab</h2>
+                    <p class="text-sm text-gray-500 max-w-xs mx-auto md:mx-0">
+                        © Ballab 2025 ve Bursa Anadolu Lisesi. Tüm hakları saklıdır.
+                    </p>
+                </div>
+                <!-- Social Icons -->
+                <div class="flex gap-6">
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path></svg>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+                    </a>
                 </div>
             </div>
 
             <!-- Center: Navigation -->
-            <div class="flex flex-col space-y-3">
+            <div class="flex flex-col items-center justify-start space-y-4 pt-2">
                 <a href="/" class="text-lg font-medium hover:text-blue-600 transition-colors">Anasayfa</a>
                 <a href="/about.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Hakkımızda</a>
                 <a href="/contact.html" class="text-lg font-medium hover:text-blue-600 transition-colors">İletişim</a>
                 <a href="/school.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Okulumuz</a>
-                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                    <a href="https://bursaanadolulisesi.meb.k12.tr/" target="_blank" class="text-gray-500 hover:text-black dark:hover:text-white font-bold transition-colors">
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 w-32 text-center">
+                    <a href="https://bursaanadolulisesi.meb.k12.tr/" target="_blank" class="text-xs text-gray-500 hover:text-black dark:hover:text-white font-bold transition-colors uppercase tracking-wider">
                         Bursa Anadolu Lisesi
                     </a>
                 </div>
             </div>
 
             <!-- Right: Logos -->
-            <div class="flex flex-col gap-2 w-32 md:w-40 ml-auto md:ml-auto items-end md:items-end">
-                <div class="grid grid-cols-2 gap-2 w-full">
-                    <div class="aspect-square bg-white/5 rounded flex items-center justify-center p-1">
-                        <img id="footer-logo-bal" src="/resources/bal-logo.png" class="w-full h-full object-contain dark:invert transition-all">
+            <div class="flex flex-col items-center md:items-end justify-center md:justify-start gap-4 w-full md:w-auto mt-8 md:mt-0">
+                <div class="grid grid-cols-2 gap-4 w-64 md:w-56">
+                    <div class="aspect-square flex items-center justify-center">
+                        <img id="footer-logo-bal" src="/resources/bal-logo.png" class="w-full h-full object-contain dark:invert transition-all hover:scale-105 duration-300">
                     </div>
-                    <div class="aspect-square bg-white/5 rounded flex items-center justify-center p-1">
-                        <img id="footer-logo-ballab" src="/resources/ballab-logo.png" class="w-full h-full object-contain dark:invert transition-all">
+                    <div class="aspect-square flex items-center justify-center">
+                        <img id="footer-logo-ballab" src="/resources/ballab-logo.png" class="w-full h-full object-contain dark:invert transition-all hover:scale-105 duration-300">
                     </div>
                 </div>
-                <div class="w-full bg-white/5 rounded flex items-center justify-center p-2">
-                    <img id="footer-logo-corensan" src="/resources/corensan-logo.png" class="w-full h-auto object-contain dark:invert transition-all">
+                <div class="w-64 md:w-56 flex items-center justify-center mt-2">
+                    <img id="footer-logo-corensan" src="/resources/corensan-logo.png" class="w-full h-auto object-contain dark:invert transition-all hover:opacity-80">
                 </div>
             </div>
         </div>

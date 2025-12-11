@@ -31,6 +31,9 @@ const initApp = async () => {
     if (state.darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
 
+    // Check Cookie Consent
+    checkCookieConsent();
+
     try {
         const response = await fetch('/api/data');
         if (!response.ok) throw new Error(`HTTP Hata: ${response.status}`);
@@ -78,6 +81,62 @@ const initApp = async () => {
         if(adminApp) adminApp.innerHTML = errorHTML;
         const publicApp = document.getElementById('app');
         if(publicApp) publicApp.innerHTML = errorHTML;
+    }
+};
+
+// --- COOKIE CONSENT ---
+const checkCookieConsent = () => {
+    if (!localStorage.getItem('cookie_consent')) {
+        const banner = document.createElement('div');
+        banner.id = 'cookie-banner';
+        
+        // Base classes
+        let classes = 'fixed z-50 bg-white dark:bg-gray-800 p-6 flex flex-col gap-4 border-gray-100 dark:border-gray-700 transform transition-all duration-700 ease-out shadow-[0_-5px_20px_rgba(0,0,0,0.15)] md:shadow-2xl ';
+        
+        // Mobile specific: Bottom sheet layout (full width, bottom-0)
+        classes += 'bottom-0 left-0 right-0 w-full rounded-t-3xl border-t ';
+        
+        // Desktop specific: Floating box layout (bottom-right, fixed width)
+        classes += 'md:bottom-8 md:right-8 md:left-auto md:w-96 md:rounded-2xl md:border ';
+        
+        // Initial Animation State (Hidden)
+        // Mobile: Translate Y 100% (Slide down)
+        // Desktop: Translate X 20 units (Slide right) + Opacity 0.
+        // Note: md:translate-y-0 is crucial to prevent desktop from inheriting mobile's Y translation.
+        classes += 'translate-y-full opacity-0 md:translate-y-0 md:translate-x-10';
+
+        banner.className = classes;
+        
+        banner.innerHTML = `
+            <div class="flex items-start gap-4">
+                <div class="text-4xl animate-bounce">🍪</div>
+                <div>
+                    <h3 class="font-serif font-bold text-lg mb-2 text-ink dark:text-white">Verilerinize Saygı Duyuyoruz</h3>
+                    <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        Çerezleri yalnızca sitemizi optimize etmek ve hizmetlerimizi geliştirmek için kullanıyoruz. Verilerinizi asla 3. şahıslarla paylaşmıyor, güvenli bir biçimde saklıyoruz.
+                    </p>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="acceptCookies()" class="bg-black text-white dark:bg-white dark:text-black px-8 py-3 md:py-2 rounded-full font-bold text-xs uppercase tracking-widest hover:opacity-80 transition shadow-lg w-full md:w-auto">Anladım</button>
+            </div>
+        `;
+        document.body.appendChild(banner);
+
+        // Trigger Entry Animation (Remove hidden states)
+        setTimeout(() => {
+            banner.classList.remove('translate-y-full', 'opacity-0', 'md:translate-x-10');
+        }, 500); 
+    }
+};
+
+window.acceptCookies = () => {
+    localStorage.setItem('cookie_consent', 'true');
+    const banner = document.getElementById('cookie-banner');
+    if(banner) {
+        // Exit Animation (Re-apply hidden states)
+        banner.classList.add('translate-y-full', 'opacity-0', 'md:translate-y-0', 'md:translate-x-10');
+        setTimeout(() => banner.remove(), 700);
     }
 };
 

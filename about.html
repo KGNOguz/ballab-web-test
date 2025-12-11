@@ -106,24 +106,76 @@
 
     <!-- About Content -->
     <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="max-w-2xl mx-auto py-12 text-center">
-            <h1 class="text-4xl font-serif font-bold mb-8">Hakkımızda</h1>
-            <div class="w-12 h-1 bg-black dark:bg-white mx-auto mb-8"></div>
-            <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed font-serif mb-12">
-                Biz BALLAB ailesi olarak bilgiyi herkesin erişebileceği şekilde sunmayı hedefliyoruz.
-                <br><br>
-                İyi okumalar dileriz...
-            </p>
-            
-            <button id="gallery-btn" class="px-8 py-3 bg-black text-white dark:bg-white dark:text-black font-bold uppercase tracking-widest rounded hover:opacity-80 transition">
-                Fotoğraf Arşivi
-            </button>
+        <!-- Hero Section -->
+        <div class="relative w-full h-[300px] md:h-[400px] rounded-2xl overflow-hidden mb-16 bg-gray-100 dark:bg-gray-800">
+            <img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=2573&auto=format&fit=crop" class="w-full h-full object-cover opacity-90 hover:scale-105 transition-transform duration-1000" alt="Hakkımızda Hero">
+            <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <div class="text-center text-white p-4">
+                    <h1 class="text-4xl md:text-6xl font-serif font-black mb-4 tracking-tight">Hakkımızda</h1>
+                    <p class="text-lg md:text-xl font-light opacity-90 max-w-2xl mx-auto">Bilgiyi, sanatı ve kültürü bir araya getiriyoruz.</p>
+                </div>
+            </div>
         </div>
 
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16">
+            <!-- Left: Text -->
+            <div class="lg:col-span-8 space-y-8">
+                <div>
+                    <h2 class="text-2xl font-serif font-bold mb-6 flex items-center gap-3">
+                        <span class="w-8 h-[1px] bg-black dark:bg-white"></span>
+                        Biz Kimiz?
+                    </h2>
+                    <div class="prose prose-lg dark:prose-invert text-gray-600 dark:text-gray-300 font-serif leading-loose">
+                        <p>
+                            BALLAB, Bursa Anadolu Lisesi'nin köklü geçmişinden ve yenilikçi vizyonundan beslenen, öğrenci odaklı bir bilim ve kültür dergisidir. Amacımız, sadece okul içi bir yayın olmanın ötesine geçerek, bilimi, sanatı ve güncel gelişmeleri herkesin anlayabileceği bir dille sunmaktır.
+                        </p>
+                        <p>
+                            Merak eden, sorgulayan ve üreten bir topluluk olarak, her sayımızda farklı bir temayı ele alıyor, derinlemesine araştırmalar ve röportajlarla içeriğimizi zenginleştiriyoruz.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <div class="text-3xl mb-2">🔭</div>
+                        <h3 class="text-lg font-bold mb-2">Vizyonumuz</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Bilimsel düşünceyi yaygınlaştırmak ve gençlerin potansiyelini ortaya çıkarmak.</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <div class="text-3xl mb-2">🌱</div>
+                        <h3 class="text-lg font-bold mb-2">Değerlerimiz</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Yenilikçilik, tarafsızlık, araştırma tutkusu ve toplumsal sorumluluk.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Action & Team Placeholder -->
+            <div class="lg:col-span-4 space-y-8">
+                <div class="bg-black text-white dark:bg-white dark:text-black p-8 rounded-xl text-center">
+                    <h3 class="font-bold text-xl mb-4">Arşivimize Göz Atın</h3>
+                    <p class="text-sm opacity-80 mb-6 leading-relaxed">Geçmiş etkinliklerimizden ve çalışmalarımızdan kareleri incelemek ister misiniz?</p>
+                    <button id="gallery-btn" class="w-full py-3 border border-white/30 dark:border-black/30 rounded-lg hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white transition font-bold text-sm uppercase tracking-wider">
+                        GALERİYİ GÖSTER
+                    </button>
+                </div>
+                
+                <div class="p-6 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                    <h3 class="font-serif font-bold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Yayın Ekibi</h3>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex justify-between"><span class="font-bold">Genel Yayın Yönetmeni</span> <span class="text-gray-500">Ahmet Yılmaz</span></li>
+                        <li class="flex justify-between"><span class="font-bold">Editör</span> <span class="text-gray-500">Zeynep Demir</span></li>
+                        <li class="flex justify-between"><span class="font-bold">Tasarım</span> <span class="text-gray-500">Mehmet Öztürk</span></li>
+                        <li class="flex justify-between"><span class="font-bold">Yazılım</span> <span class="text-gray-500">BALLAB Tech</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden Gallery -->
         <div id="gallery-container" class="hidden grid-cols-1 md:grid-cols-3 gap-4 mt-8 opacity-0 transition-opacity duration-1000">
-             <img src="https://bursaanadolulisesi.meb.k12.tr/meb_iys_dosyalar/16/15/134726/resimler/2025_04/18123358_whatsappimage20250418at12.02.29.jpg" class="w-full h-64 object-cover rounded">
-             <img src="https://bursaanadolulisesi.meb.k12.tr/meb_iys_dosyalar/16/15/134726/resimler/2025_04/18123400_whatsappimage20250418at12.02.28.jpg" class="w-full h-64 object-cover rounded">
-             <img src="https://bursaanadolulisesi.meb.k12.tr/meb_iys_dosyalar/16/15/134726/resimler/2025_04/18123359_whatsappimage20250418at12.02.281.jpg" class="w-full h-64 object-cover rounded">
+             <img src="https://bursaanadolulisesi.meb.k12.tr/meb_iys_dosyalar/16/15/134726/resimler/2025_04/18123358_whatsappimage20250418at12.02.29.jpg" class="w-full h-64 object-cover rounded-lg shadow-sm hover:scale-[1.02] transition-transform">
+             <img src="https://bursaanadolulisesi.meb.k12.tr/meb_iys_dosyalar/16/15/134726/resimler/2025_04/18123400_whatsappimage20250418at12.02.28.jpg" class="w-full h-64 object-cover rounded-lg shadow-sm hover:scale-[1.02] transition-transform">
+             <img src="https://bursaanadolulisesi.meb.k12.tr/meb_iys_dosyalar/16/15/134726/resimler/2025_04/18123359_whatsappimage20250418at12.02.281.jpg" class="w-full h-64 object-cover rounded-lg shadow-sm hover:scale-[1.02] transition-transform">
         </div>
     </main>
 
@@ -133,9 +185,9 @@
             <!-- Left: Brand & Social -->
             <div class="flex flex-col items-center md:items-start text-center md:text-left space-y-6">
                 <div>
-                    <h2 class="text-5xl font-serif font-black tracking-tighter text-ink dark:text-white mb-2">Ballab</h2>
+                    <h2 class="text-5xl font-serif font-black tracking-tighter text-ink dark:text-white mb-2">BALLAB</h2>
                     <p class="text-sm text-gray-500 max-w-xs mx-auto md:mx-0">
-                        © Ballab 2025 ve Bursa Anadolu Lisesi. Tüm hakları saklıdır.
+                        © BALLAB ve © Bursa Anadolu Lisesi. Tüm hakları saklıdır.
                     </p>
                 </div>
                 <!-- Social Icons -->
@@ -183,5 +235,16 @@
     </footer>
 
     <script src="index.js"></script>
+    <script>
+        document.getElementById('gallery-btn').addEventListener('click', function() {
+            const gallery = document.getElementById('gallery-container');
+            gallery.classList.remove('hidden');
+            gallery.classList.add('grid');
+            setTimeout(() => {
+                gallery.classList.remove('opacity-0');
+            }, 50);
+            this.style.display = 'none'; // Hide button after click
+        });
+    </script>
 </body>
 </html>

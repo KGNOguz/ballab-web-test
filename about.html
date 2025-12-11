@@ -23,7 +23,10 @@
             }
         }
     </script>
-    <style>body { -webkit-font-smoothing: antialiased; }</style>
+    <style>
+        body { -webkit-font-smoothing: antialiased; }
+        .clip-hexagon { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+    </style>
 </head>
 <body class="bg-paper text-ink dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 flex flex-col min-h-screen">
 
@@ -37,7 +40,13 @@
                         <span class="hidden md:inline text-sm font-medium text-gray-500 group-hover:text-blue-600">Menü</span>
                     </button>
                 </div>
-                <a href="/" class="text-3xl font-serif font-black tracking-tighter cursor-pointer select-none absolute left-1/2 transform -translate-x-1/2 flex items-center h-full pb-1">BALLAB</a>
+                
+                <!-- Center: Logo Group -->
+                <a href="/" class="absolute left-1/2 transform -translate-x-1/2 flex items-center h-full gap-4 group cursor-pointer select-none">
+                    <img src="https://bursaanadolulisesi.meb.k12.tr/tema/ilbis/meb_iys_dosyalar/16/15/134726/dosyalar/2022_11/04104255_bal-logo.png" alt="BAL Logo" class="h-10 w-10 md:h-12 md:w-12 object-contain grayscale group-hover:grayscale-0 transition-all duration-300">
+                    <div class="h-8 w-[1.5px] bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                    <span class="text-2xl md:text-3xl font-serif font-black tracking-tighter pb-1">BALLAB</span>
+                </a>
                 
                 <div class="flex items-center gap-4">
                      <!-- Search Box -->
@@ -107,22 +116,57 @@
         </div>
     </main>
 
-    <footer class="border-t border-gray-100 dark:border-gray-800 py-16 mt-auto bg-white dark:bg-gray-900">
-        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-            <!-- Left -->
-            <div class="text-center md:text-left">
-                <div class="font-serif text-3xl font-black mb-2 tracking-tight">BALLAB</div>
-                <p class="text-gray-400 text-sm">© 2025 BALLAB. Tüm hakları saklıdır.</p>
+    <!-- Footer -->
+    <footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pt-16 pb-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12">
+            <!-- Left: Brand & Social -->
+            <div class="space-y-6">
+                <h2 class="text-5xl font-serif font-black tracking-tighter text-ink dark:text-white">Ballab</h2>
+                <p class="text-sm text-gray-500 max-w-xs">
+                    © Ballab 2025 ve Bursa Anadolu Lisesi. Tüm hakları saklıdır.
+                </p>
+                <div class="flex gap-4">
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Instagram</a>
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Twitter</a>
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Facebook</a>
+                </div>
             </div>
-            <!-- Center -->
-            <div class="flex justify-center">
-                 <a href="https://www.instagram.com/ballab_bilim_dergisi/" target="_blank" class="text-gray-400 hover:text-pink-600 transition-colors p-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                </a>
+
+            <!-- Center: Navigation -->
+            <div class="flex flex-col space-y-3">
+                <a href="/" class="text-lg font-medium hover:text-blue-600 transition-colors">Anasayfa</a>
+                <a href="/about.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Hakkımızda</a>
+                <a href="/contact.html" class="text-lg font-medium hover:text-blue-600 transition-colors">İletişim</a>
+                <a href="/school.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Okulumuz</a>
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <a href="https://bursaanadolulisesi.meb.k12.tr/" target="_blank" class="text-gray-500 hover:text-black dark:hover:text-white font-bold transition-colors">
+                        Bursa Anadolu Lisesi
+                    </a>
+                </div>
             </div>
-            <!-- Right -->
-            <div class="text-center md:text-right">
-                <div class="font-serif text-3xl font-black mb-2 tracking-tight">by CORENSAN</div>
+
+            <!-- Right: Logos -->
+            <div class="flex flex-col items-start md:items-end gap-8">
+                <!-- Top Row: BAL + BALLAB -->
+                <div class="flex items-center gap-4 opacity-80 hover:opacity-100 transition-opacity">
+                    <img src="https://bursaanadolulisesi.meb.k12.tr/tema/ilbis/meb_iys_dosyalar/16/15/134726/dosyalar/2022_11/04104255_bal-logo.png" class="h-16 w-16 object-contain grayscale hover:grayscale-0 transition-all">
+                    <div class="flex flex-col text-right">
+                         <span class="text-xs font-bold tracking-widest text-gray-400 uppercase">Dergi</span>
+                         <span class="text-xl font-serif font-black tracking-tight leading-none">BALLAB</span>
+                    </div>
+                </div>
+                <!-- Bottom Row: Corensan -->
+                <div class="mt-auto">
+                    <div class="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
+                         <div class="relative w-8 h-8 bg-black dark:bg-white clip-hexagon flex items-center justify-center">
+                            <div class="w-4 h-4 bg-white dark:bg-black rounded-full"></div>
+                         </div>
+                         <div class="flex flex-col leading-none">
+                            <span class="font-black text-xl tracking-tighter">CORENSAN</span>
+                            <span class="text-[8px] font-bold tracking-widest uppercase">WEB SOLUTIONS</span>
+                         </div>
+                    </div>
+                </div>
             </div>
         </div>
     </footer>

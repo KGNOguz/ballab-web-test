@@ -27,10 +27,15 @@ if (!fs.existsSync(DATA_FILE)) {
         announcement: { text: "Yayındayız!", active: true }, 
         files: [], 
         messages: [],
-        adminConfig: { password: "admin123" }, // Default password
+        adminConfig: { password: "admin123" }, 
         ads: {
             ad1: "https://placehold.co/400x300?text=REKLAM+ALANI+1",
             ad2: "https://placehold.co/400x300?text=REKLAM+ALANI+2"
+        },
+        logos: {
+            bal: "/resources/bal-logo.png",
+            ballab: "/resources/ballab-logo.png", // Default placeholder path if needed
+            corensan: "/resources/corensan-logo.png"
         }
     };
     fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
@@ -47,7 +52,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.get('/api/data', (req, res) => {
     fs.readFile(DATA_FILE, 'utf8', (err, data) => {
         if (err) {
-            return res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {} });
+            return res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {}, logos: {} });
         }
         try { 
             const json = JSON.parse(data);
@@ -55,9 +60,10 @@ app.get('/api/data', (req, res) => {
             if(!json.messages) json.messages = []; 
             if(!json.adminConfig) json.adminConfig = { password: "admin123" };
             if(!json.ads) json.ads = { ad1: "", ad2: "" };
+            if(!json.logos) json.logos = { bal: "", ballab: "", corensan: "" };
             res.json(json); 
         } catch (e) { 
-            res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {} }); 
+            res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {}, logos: {} }); 
         }
     });
 });
@@ -153,6 +159,9 @@ app.use(express.static(__dirname));
 
 // --- TEMPLATE ---
 const generateArticleHTML = (article) => {
+    // Template html generation logic remains similar but client side JS in template will handle logos via fetching data.json logic if implemented fully dynamically, 
+    // OR we can embed logos if we pass them. For simplicity, the static pages fetch data.json via index.js so the logos will update there.
+    // For specific articles, we need to ensure index.js runs and updates logos.
     return `
 <!DOCTYPE html>
 <html lang="tr">
@@ -193,7 +202,11 @@ const generateArticleHTML = (article) => {
                         <span class="hidden md:inline text-sm font-medium text-gray-500 group-hover:text-blue-600">Menü</span>
                     </button>
                 </div>
-                <a href="/" class="text-3xl font-serif font-black tracking-tighter cursor-pointer select-none absolute left-1/2 transform -translate-x-1/2 flex items-center h-full pb-1">BALLAB</a>
+                <a href="/" class="absolute left-1/2 transform -translate-x-1/2 flex items-center h-full gap-4 group cursor-pointer select-none">
+                    <img id="nav-logo-bal" src="/resources/bal-logo.png" alt="BAL" class="h-10 w-auto object-contain dark:invert transition-all">
+                    <div class="h-8 w-[1.5px] bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                    <img id="nav-logo-ballab" src="" alt="BALLAB" class="h-8 w-auto object-contain dark:invert transition-all">
+                </a>
                 <div class="flex items-center gap-4">
                      <form onsubmit="handleSearch(event)" class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1 pl-4 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all">
                         <input type="text" name="q" placeholder="Ara..." class="bg-transparent text-sm focus:outline-none w-32 focus:w-48 transition-all placeholder-gray-500 dark:placeholder-gray-400">
@@ -257,22 +270,43 @@ const generateArticleHTML = (article) => {
         </div>
     </main>
 
-    <footer class="border-t border-gray-100 dark:border-gray-800 py-16 mt-auto bg-white dark:bg-gray-900">
-        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-            <!-- Left -->
-            <div class="text-center md:text-left">
-                <div class="font-serif text-3xl font-black mb-2 tracking-tight">BALLAB</div>
-                <p class="text-gray-400 text-sm">© 2025 BALLAB. Tüm hakları saklıdır.</p>
+    <footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pt-16 pb-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12">
+            <!-- Left: Brand & Social -->
+            <div class="space-y-6">
+                <h2 class="text-5xl font-serif font-black tracking-tighter text-ink dark:text-white">Ballab</h2>
+                <p class="text-sm text-gray-500 max-w-xs">
+                    © Ballab 2025 ve Bursa Anadolu Lisesi. Tüm hakları saklıdır.
+                </p>
+                <div class="flex gap-4">
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Instagram</a>
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Twitter</a>
+                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors font-bold text-sm">Facebook</a>
+                </div>
             </div>
-            <!-- Center -->
-            <div class="flex justify-center">
-                 <a href="https://instagram.com" target="_blank" class="text-gray-400 hover:text-pink-600 transition-colors p-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                </a>
+
+            <!-- Center: Navigation -->
+            <div class="flex flex-col space-y-3">
+                <a href="/" class="text-lg font-medium hover:text-blue-600 transition-colors">Anasayfa</a>
+                <a href="/about.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Hakkımızda</a>
+                <a href="/contact.html" class="text-lg font-medium hover:text-blue-600 transition-colors">İletişim</a>
+                <a href="/school.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Okulumuz</a>
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <a href="https://bursaanadolulisesi.meb.k12.tr/" target="_blank" class="text-gray-500 hover:text-black dark:hover:text-white font-bold transition-colors">
+                        Bursa Anadolu Lisesi
+                    </a>
+                </div>
             </div>
-            <!-- Right -->
-            <div class="text-center md:text-right">
-                <div class="font-serif text-3xl font-black mb-2 tracking-tight">by CORENSAN</div>
+
+            <!-- Right: Logos -->
+            <div class="flex flex-col items-end gap-6">
+                <div class="flex items-center gap-4">
+                    <img id="footer-logo-bal" src="" class="h-16 w-auto object-contain dark:invert transition-all">
+                    <img id="footer-logo-ballab" src="" class="h-12 w-auto object-contain dark:invert transition-all">
+                </div>
+                <div>
+                    <img id="footer-logo-corensan" src="" class="h-8 w-auto object-contain dark:invert transition-all">
+                </div>
             </div>
         </div>
     </footer>

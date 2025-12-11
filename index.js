@@ -1,4 +1,5 @@
 
+
 // --- STATE & INITIALIZATION ---
 
 let state = {
@@ -7,8 +8,9 @@ let state = {
     announcement: { text: '', active: false },
     files: [], 
     messages: [], 
-    adminConfig: { password: 'admin123' }, // Default safe fallback logic handled in API init
-    ads: { ad1: '', ad2: '' }, // New: Ads state
+    adminConfig: { password: 'admin123' },
+    ads: { ad1: '', ad2: '' },
+    logos: { bal: '', ballab: '', corensan: '' }, // New: Logo state
     isAuthenticated: false,
     darkMode: false, 
     menuOpen: false,
@@ -42,6 +44,7 @@ const initApp = async () => {
         state.messages = data.messages || [];
         state.adminConfig = data.adminConfig || { password: 'admin123' };
         state.ads = data.ads || { ad1: '', ad2: '' };
+        state.logos = data.logos || { bal: '', ballab: '', corensan: '' };
         
         const adminApp = document.getElementById('admin-app');
         const publicApp = document.getElementById('app'); 
@@ -49,6 +52,7 @@ const initApp = async () => {
 
         renderSidebarCategories();
         renderAnnouncement();
+        renderLogos(); // Inject logos into DOM
 
         if (adminApp) {
             if(sessionStorage.getItem('admin_auth') === 'true') {
@@ -75,6 +79,26 @@ const initApp = async () => {
         const publicApp = document.getElementById('app');
         if(publicApp) publicApp.innerHTML = errorHTML;
     }
+};
+
+// --- LOGO RENDERER ---
+const renderLogos = () => {
+    // Helper to safely set src
+    const setSrc = (id, src) => {
+        const el = document.getElementById(id);
+        if(el && src) {
+            el.src = src;
+            el.classList.remove('hidden');
+        } else if (el) {
+            // el.classList.add('hidden'); // Optional: hide if no logo
+        }
+    };
+
+    setSrc('nav-logo-bal', state.logos.bal);
+    setSrc('nav-logo-ballab', state.logos.ballab);
+    setSrc('footer-logo-bal', state.logos.bal);
+    setSrc('footer-logo-ballab', state.logos.ballab);
+    setSrc('footer-logo-corensan', state.logos.corensan);
 };
 
 // --- PASTEL COLOR GENERATOR ---
@@ -660,6 +684,55 @@ const renderSettingsView = () => `
             </form>
         </div>
 
+        <!-- Logo Management -->
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <h2 class="text-lg font-serif font-bold mb-4">Logo Yönetimi</h2>
+            <div class="space-y-6">
+                <!-- BAL Logo -->
+                <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
+                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BAL Logosu (Sol Navbar & Footer)</label>
+                    <div class="flex gap-4 items-start mb-2">
+                        ${state.logos.bal ? `<img src="${state.logos.bal}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
+                        <div class="flex-grow space-y-2">
+                            <input id="logo-bal-url" value="${state.logos.bal}" placeholder="URL veya Dosya Yükle" class="w-full p-2 text-sm border rounded">
+                            <div class="flex gap-2">
+                                <input type="file" onchange="handleLogoUpload(event, 'bal')" class="text-xs">
+                                <button onclick="updateLogoUrl('bal')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded font-bold">GÜNCELLE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- BALLAB Logo -->
+                <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
+                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BALLAB Logosu (Navbar Sağ & Footer)</label>
+                    <div class="flex gap-4 items-start mb-2">
+                        ${state.logos.ballab ? `<img src="${state.logos.ballab}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
+                        <div class="flex-grow space-y-2">
+                            <input id="logo-ballab-url" value="${state.logos.ballab}" placeholder="URL veya Dosya Yükle" class="w-full p-2 text-sm border rounded">
+                            <div class="flex gap-2">
+                                <input type="file" onchange="handleLogoUpload(event, 'ballab')" class="text-xs">
+                                <button onclick="updateLogoUrl('ballab')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded font-bold">GÜNCELLE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Corensan Logo -->
+                <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
+                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">Corensan Logosu (Footer Alt)</label>
+                    <div class="flex gap-4 items-start mb-2">
+                        ${state.logos.corensan ? `<img src="${state.logos.corensan}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
+                        <div class="flex-grow space-y-2">
+                            <input id="logo-corensan-url" value="${state.logos.corensan}" placeholder="URL veya Dosya Yükle" class="w-full p-2 text-sm border rounded">
+                            <div class="flex gap-2">
+                                <input type="file" onchange="handleLogoUpload(event, 'corensan')" class="text-xs">
+                                <button onclick="updateLogoUrl('corensan')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded font-bold">GÜNCELLE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Ad Management -->
         <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
             <h2 class="text-lg font-serif font-bold mb-4">Reklam Yönetimi</h2>
@@ -737,8 +810,9 @@ window.saveChanges = async () => {
         announcement: state.announcement, 
         files: state.files, 
         messages: state.messages,
-        adminConfig: state.adminConfig, // Save password
-        ads: state.ads // Save ads
+        adminConfig: state.adminConfig, 
+        ads: state.ads,
+        logos: state.logos
     };
     try {
         const response = await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(exportData) });
@@ -775,7 +849,7 @@ window.copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() =
 window.handleDeleteMessage = (id) => { if(confirm("Mesaj silinsin mi?")) { state.messages = state.messages.filter(m => m.id !== id); renderAdmin(document.getElementById('admin-app')); alert("Mesaj kaldırıldı. Değişikliği kalıcı yapmak için 'KAYDET' butonuna basın."); } };
 window.handleSendMessage = async (e) => { e.preventDefault(); const formData = new FormData(e.target); const messageData = { name: formData.get('name'), email: formData.get('email'), subject: formData.get('subject'), message: formData.get('message') }; try { const res = await fetch('/api/contact', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(messageData) }); if(res.ok) { alert("Mesajınız iletildi! Teşekkürler."); e.target.reset(); } else { alert("Bir hata oluştu."); } } catch(err) { alert("Bağlantı hatası."); } };
 
-// --- NEW HANDLERS FOR SETTINGS ---
+// --- NEW HANDLERS FOR SETTINGS & LOGOS ---
 
 window.handleUpdatePassword = (e) => {
     e.preventDefault();
@@ -799,7 +873,6 @@ window.handleAdFileUpload = async (e, adKey) => {
         const res = await fetch('/api/upload', { method: 'POST', body: formData });
         if(res.ok) {
             const result = await res.json();
-            // Automatically update input and state
             state.ads[adKey] = result.url;
             renderAdmin(document.getElementById('admin-app'));
         } else alert("Yükleme hatası");
@@ -811,6 +884,30 @@ window.updateAdUrl = (adKey) => {
     state.ads[adKey] = url;
     renderAdmin(document.getElementById('admin-app'));
     alert("Reklam URL güncellendi. 'KAYDET' yapmayı unutmayın.");
+};
+
+window.handleLogoUpload = async (e, logoKey) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if(res.ok) {
+            const result = await res.json();
+            state.logos[logoKey] = result.url;
+            renderAdmin(document.getElementById('admin-app'));
+            renderLogos(); // Live preview update
+        } else alert("Yükleme hatası");
+    } catch(err) { alert("Hata"); }
+};
+
+window.updateLogoUrl = (logoKey) => {
+    const url = document.getElementById('logo-' + logoKey + '-url').value;
+    state.logos[logoKey] = url;
+    renderAdmin(document.getElementById('admin-app'));
+    renderLogos();
+    alert("Logo URL güncellendi. 'KAYDET' yapmayı unutmayın.");
 };
 
 // --- EVENTS ---

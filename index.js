@@ -94,8 +94,10 @@ const renderLogos = () => {
         }
     };
 
+    // Navbar: Only BAL logo is image, BALLAB is text (handled in HTML)
     setSrc('nav-logo-bal', state.logos.bal);
-    setSrc('nav-logo-ballab', state.logos.ballab);
+    
+    // Footer: All 3 logos
     setSrc('footer-logo-bal', state.logos.bal);
     setSrc('footer-logo-ballab', state.logos.ballab);
     setSrc('footer-logo-corensan', state.logos.corensan);
@@ -704,7 +706,7 @@ const renderSettingsView = () => `
                 </div>
                 <!-- BALLAB Logo -->
                 <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BALLAB Logosu (Navbar Sağ & Footer)</label>
+                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BALLAB Logosu (Footer Sağ Üst)</label>
                     <div class="flex gap-4 items-start mb-2">
                         ${state.logos.ballab ? `<img src="${state.logos.ballab}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
                         <div class="flex-grow space-y-2">
@@ -718,7 +720,7 @@ const renderSettingsView = () => `
                 </div>
                 <!-- Corensan Logo -->
                 <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">Corensan Logosu (Footer Alt)</label>
+                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">Corensan Logosu (Footer Alt Geniş)</label>
                     <div class="flex gap-4 items-start mb-2">
                         ${state.logos.corensan ? `<img src="${state.logos.corensan}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
                         <div class="flex-grow space-y-2">

@@ -46,8 +46,13 @@
                 
                 <!-- Center: Logo Group -->
                 <a href="/" class="absolute left-1/2 transform -translate-x-1/2 flex items-center h-full gap-4 group cursor-pointer select-none">
-                    <img src="https://bursaanadolulisesi.meb.k12.tr/tema/ilbis/meb_iys_dosyalar/16/15/134726/dosyalar/2022_11/04104255_bal-logo.png" alt="BAL Logo" class="h-10 w-10 md:h-12 md:w-12 object-contain grayscale group-hover:grayscale-0 transition-all duration-300">
+                    <!-- BAL Logo -->
+                    <img id="nav-logo-bal" src="/resources/bal-logo.png" alt="BAL Logo" class="h-10 w-auto object-contain dark:invert transition-all duration-300">
+                    
+                    <!-- Divider -->
                     <div class="h-8 w-[1.5px] bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                    
+                    <!-- BALLAB Text -->
                     <span class="text-2xl md:text-3xl font-serif font-black tracking-tighter pb-1">BALLAB</span>
                 </a>
                 
@@ -177,26 +182,17 @@
             </div>
 
             <!-- Right: Logos -->
-            <div class="flex flex-col items-start md:items-end gap-8">
-                <!-- Top Row: BAL + BALLAB -->
-                <div class="flex items-center gap-4 opacity-80 hover:opacity-100 transition-opacity">
-                    <img src="https://bursaanadolulisesi.meb.k12.tr/tema/ilbis/meb_iys_dosyalar/16/15/134726/dosyalar/2022_11/04104255_bal-logo.png" class="h-16 w-16 object-contain grayscale hover:grayscale-0 transition-all">
-                    <div class="flex flex-col text-right">
-                         <span class="text-xs font-bold tracking-widest text-gray-400 uppercase">Dergi</span>
-                         <span class="text-xl font-serif font-black tracking-tight leading-none">BALLAB</span>
+            <div class="flex flex-col gap-2 w-32 md:w-40 ml-auto md:ml-auto items-end md:items-end">
+                <div class="grid grid-cols-2 gap-2 w-full">
+                    <div class="aspect-square bg-white/5 rounded flex items-center justify-center p-1">
+                        <img id="footer-logo-bal" src="/resources/bal-logo.png" class="w-full h-full object-contain dark:invert transition-all">
+                    </div>
+                    <div class="aspect-square bg-white/5 rounded flex items-center justify-center p-1">
+                        <img id="footer-logo-ballab" src="/resources/ballab-logo.png" class="w-full h-full object-contain dark:invert transition-all">
                     </div>
                 </div>
-                <!-- Bottom Row: Corensan -->
-                <div class="mt-auto">
-                    <div class="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
-                         <div class="relative w-8 h-8 bg-black dark:bg-white clip-hexagon flex items-center justify-center">
-                            <div class="w-4 h-4 bg-white dark:bg-black rounded-full"></div>
-                         </div>
-                         <div class="flex flex-col leading-none">
-                            <span class="font-black text-xl tracking-tighter">CORENSAN</span>
-                            <span class="text-[8px] font-bold tracking-widest uppercase">WEB SOLUTIONS</span>
-                         </div>
-                    </div>
+                <div class="w-full bg-white/5 rounded flex items-center justify-center p-2">
+                    <img id="footer-logo-corensan" src="/resources/corensan-logo.png" class="w-full h-auto object-contain dark:invert transition-all">
                 </div>
             </div>
         </div>

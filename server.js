@@ -169,6 +169,10 @@ const generateArticleHTML = (article) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${article.title} - BALLAB</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" id="dynamic-favicon" href="/resources/ballab-logo.png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300&display=swap" rel="stylesheet">
@@ -202,11 +206,19 @@ const generateArticleHTML = (article) => {
                         <span class="hidden md:inline text-sm font-medium text-gray-500 group-hover:text-blue-600">Menü</span>
                     </button>
                 </div>
+                
+                <!-- Center: Logo Group -->
                 <a href="/" class="absolute left-1/2 transform -translate-x-1/2 flex items-center h-full gap-4 group cursor-pointer select-none">
-                    <img id="nav-logo-bal" src="/resources/bal-logo.png" alt="BAL" class="h-10 w-auto object-contain dark:invert transition-all">
+                    <!-- BAL Logo -->
+                    <img id="nav-logo-bal" src="/resources/bal-logo.png" alt="BAL Logo" class="h-10 w-auto object-contain dark:invert transition-all duration-300">
+                    
+                    <!-- Divider -->
                     <div class="h-8 w-[1.5px] bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                    <img id="nav-logo-ballab" src="" alt="BALLAB" class="h-8 w-auto object-contain dark:invert transition-all">
+                    
+                    <!-- BALLAB Text -->
+                    <span class="text-2xl md:text-3xl font-serif font-black tracking-tighter pb-1">BALLAB</span>
                 </a>
+
                 <div class="flex items-center gap-4">
                      <form onsubmit="handleSearch(event)" class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1 pl-4 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all">
                         <input type="text" name="q" placeholder="Ara..." class="bg-transparent text-sm focus:outline-none w-32 focus:w-48 transition-all placeholder-gray-500 dark:placeholder-gray-400">
@@ -249,7 +261,7 @@ const generateArticleHTML = (article) => {
         <div class="p-6 border-t border-gray-100 dark:border-gray-800">
              <div class="flex gap-4 justify-center opacity-50">
                 <!-- Sidebar Footer BAL Logo -->
-                <img src="/resources/bal-logo.png" alt="BAL" class="w-8 h-8 opacity-50 hover:opacity-100 transition-opacity dark:invert object-contain">
+                <img id="sidebar-logo-bal" src="/resources/bal-logo.png" alt="BAL" class="w-8 h-8 opacity-50 hover:opacity-100 transition-opacity dark:invert object-contain">
              </div>
         </div>
     </aside>
@@ -289,14 +301,8 @@ const generateArticleHTML = (article) => {
                 </div>
                 <!-- Social Icons -->
                 <div class="flex gap-6">
-                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                    <a href="https://www.instagram.com/ballab_bilim_dergisi" target="_blank" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                    </a>
-                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path></svg>
-                    </a>
-                    <a href="#" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
                     </a>
                 </div>
             </div>
@@ -318,7 +324,9 @@ const generateArticleHTML = (article) => {
             <div class="flex flex-col items-center md:items-end justify-center md:justify-start gap-4 w-full md:w-auto mt-8 md:mt-0">
                 <div class="grid grid-cols-2 gap-4 w-64 md:w-56">
                     <div class="aspect-square flex items-center justify-center">
-                        <img id="footer-logo-bal" src="/resources/bal-logo.png" class="w-full h-full object-contain dark:invert transition-all hover:scale-105 duration-300">
+                        <a href="https://bursaanadolulisesi.meb.k12.tr/" target="_blank" class="w-full h-full block">
+                            <img id="footer-logo-bal" src="/resources/bal-logo.png" class="w-full h-full object-contain dark:invert transition-all hover:scale-105 duration-300">
+                        </a>
                     </div>
                     <div class="aspect-square flex items-center justify-center">
                         <img id="footer-logo-ballab" src="/resources/ballab-logo.png" class="w-full h-full object-contain dark:invert transition-all hover:scale-105 duration-300">

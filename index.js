@@ -100,9 +100,6 @@ const checkCookieConsent = () => {
         classes += 'md:bottom-8 md:right-8 md:left-auto md:w-96 md:rounded-2xl md:border ';
         
         // Initial Animation State (Hidden)
-        // Mobile: Translate Y 100% (Slide down)
-        // Desktop: Translate X 20 units (Slide right) + Opacity 0.
-        // Note: md:translate-y-0 is crucial to prevent desktop from inheriting mobile's Y translation.
         classes += 'translate-y-full opacity-0 md:translate-y-0 md:translate-x-10';
 
         banner.className = classes;
@@ -148,18 +145,25 @@ const renderLogos = () => {
         if(el && src) {
             el.src = src;
             el.classList.remove('hidden');
-        } else if (el) {
-            // el.classList.add('hidden'); // Optional: hide if no logo
         }
     };
 
     // Navbar: Only BAL logo is image, BALLAB is text (handled in HTML)
     setSrc('nav-logo-bal', state.logos.bal);
     
+    // Sidebar Footer Logo (Now dynamic BAL logo)
+    setSrc('sidebar-logo-bal', state.logos.bal);
+    
     // Footer: All 3 logos
     setSrc('footer-logo-bal', state.logos.bal);
     setSrc('footer-logo-ballab', state.logos.ballab);
     setSrc('footer-logo-corensan', state.logos.corensan);
+
+    // Favicon (Browser Icon)
+    const favicon = document.getElementById('dynamic-favicon');
+    if(favicon && state.logos.ballab) {
+        favicon.href = state.logos.ballab;
+    }
 };
 
 // --- PASTEL COLOR GENERATOR ---
@@ -751,7 +755,7 @@ const renderSettingsView = () => `
             <div class="space-y-6">
                 <!-- BAL Logo -->
                 <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BAL Logosu (Sol Navbar & Footer)</label>
+                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BAL Logosu (Sol Navbar, Sidebar Alt & Footer)</label>
                     <div class="flex gap-4 items-start mb-2">
                         ${state.logos.bal ? `<img src="${state.logos.bal}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
                         <div class="flex-grow space-y-2">
@@ -765,7 +769,7 @@ const renderSettingsView = () => `
                 </div>
                 <!-- BALLAB Logo -->
                 <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BALLAB Logosu (Footer Sağ Üst)</label>
+                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BALLAB Logosu (Favicon & Footer Sağ Üst)</label>
                     <div class="flex gap-4 items-start mb-2">
                         ${state.logos.ballab ? `<img src="${state.logos.ballab}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
                         <div class="flex-grow space-y-2">

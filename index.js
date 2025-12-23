@@ -2,13 +2,13 @@
 
 // --- CONFIGURATION ---
 // DEĞİŞTİR: Supabase Proje URL ve Anon Key
-const SUPABASE_URL = "BURAYA_SUPABASE_PROJECT_URL_YAZIN"; 
-const SUPABASE_ANON_KEY = "BURAYA_SUPABASE_ANON_KEY_YAZIN";
+const SUPABASE_URL = "https://kejuyiqrztluhsinlkqk.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlanV5aXFyenRsdWhzaW5sa3FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTUwNDksImV4cCI6MjA4MjA5MTA0OX0.R8ivp1lQwoRwNnBXR9KMWaxp_kaoShp3ZnTbALE3RNs";
 
 // DEĞİŞTİR: Backend URL (Render'daki adres)
 // Geliştirme ortamında (localhost) 'http://localhost:3000' kullanın.
 // Canlıya (Render) atınca 'https://sizin-app-ismi.onrender.com' yapın.
-const BACKEND_API_URL = "http://localhost:3000"; 
+const BACKEND_API_URL = "https://ballab-test.onrender.com"; 
 
 // --- INITIALIZE SUPABASE CLIENT (PUBLIC READ) ---
 let supabase;

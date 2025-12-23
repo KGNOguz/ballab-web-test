@@ -171,23 +171,6 @@ window.getCategoryStyle = (name) => {
     return colors[sum % colors.length];
 };
 
-window.getTeamTagColor = (name) => {
-    // Generates solid colors for the team tags as requested
-    const colors = [
-        'bg-purple-600 text-white',
-        'bg-pink-500 text-white',
-        'bg-cyan-400 text-black',
-        'bg-orange-500 text-white',
-        'bg-blue-600 text-white',
-        'bg-emerald-500 text-white',
-        'bg-rose-500 text-white',
-        'bg-indigo-500 text-white'
-    ];
-    let sum = 0;
-    for (let i = 0; i < name.length; i++) { sum += name.charCodeAt(i); }
-    return colors[sum % colors.length];
-};
-
 // --- SHARED UTILS ---
 const toggleTheme = () => {
     state.darkMode = !state.darkMode;
@@ -429,22 +412,23 @@ const renderTeam = (container) => {
         <div class="max-w-7xl mx-auto py-8">
             <h1 class="text-4xl font-serif font-bold mb-16 text-center">Ekibimiz</h1>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-8">
                 ${state.team.map(member => `
-                    <div class="bg-gray-200 dark:bg-gray-800 relative w-full aspect-[9/10] p-6 shadow-sm hover:shadow-md transition">
-                        <!-- Name -->
-                        <h3 class="text-2xl font-serif font-bold text-center text-ink dark:text-white mb-6">${member.name}</h3>
+                    <div class="bg-gray-100 dark:bg-gray-800 relative w-full aspect-square p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between group">
                         
-                        <!-- Tags Grid -->
-                        <div class="grid grid-cols-2 gap-2 mb-16">
+                        <!-- Top: Name -->
+                        <h3 class="text-xl md:text-2xl font-serif font-bold text-center text-ink dark:text-white mt-4 group-hover:scale-105 transition-transform">${member.name}</h3>
+                        
+                        <!-- Middle: Tags as Pills -->
+                        <div class="flex flex-wrap justify-center content-center gap-2 my-2">
                             ${member.tags.map(tag => `
-                                <div class="${window.getTeamTagColor(tag)} h-8 w-full"></div>
+                                <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${window.getCategoryStyle(tag)}">${tag}</span>
                             `).join('')}
                         </div>
 
-                        <!-- Link Box (Bottom Right) -->
-                        <a href="${member.youtubeLink || '#'}" target="_blank" class="absolute bottom-6 right-6 w-14 h-14 bg-gray-700 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="0" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- Bottom Right: YouTube Link -->
+                        <a href="${member.youtubeLink || '#'}" target="_blank" class="absolute bottom-4 right-4 text-red-600 hover:text-red-700 transition-colors hover:scale-110">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
                             </svg>
                         </a>
@@ -768,9 +752,9 @@ const renderTeamSettingsView = () => `
         </form>
         <div class="flex flex-wrap gap-2">
             ${state.teamTags.map((tag, index) => `
-                <div class="flex items-center gap-2 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
-                    <span class="text-sm font-bold">${tag}</span>
-                    <button onclick="handleDeleteTeamTag(${index})" class="text-red-500 hover:text-red-700">×</button>
+                <div class="flex items-center gap-2 px-3 py-1 rounded-full ${window.getCategoryStyle(tag)}">
+                    <span class="text-xs font-bold uppercase tracking-wide">${tag}</span>
+                    <button onclick="handleDeleteTeamTag(${index})" class="hover:text-red-500 font-bold ml-1">×</button>
                 </div>
             `).join('')}
         </div>
@@ -790,7 +774,7 @@ const renderTeamSettingsView = () => `
                     ${state.teamTags.map(tag => `
                         <label class="flex items-center space-x-2 cursor-pointer">
                             <input type="checkbox" name="tags" value="${tag}" class="rounded w-4 h-4">
-                            <span class="text-sm">${tag}</span>
+                            <span class="text-xs font-bold px-2 py-1 rounded ${window.getCategoryStyle(tag)}">${tag}</span>
                         </label>
                     `).join('')}
                 </div>
@@ -804,8 +788,8 @@ const renderTeamSettingsView = () => `
             <div class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
                 <div>
                     <h3 class="font-bold text-lg">${member.name}</h3>
-                    <div class="flex gap-2 mt-1">
-                        ${member.tags.map(t => `<span class="text-[10px] bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded">${t}</span>`).join('')}
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        ${member.tags.map(t => `<span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase ${window.getCategoryStyle(t)}">${t}</span>`).join('')}
                     </div>
                 </div>
                 <button onclick="handleDeleteTeamMember(${index})" class="text-xs bg-red-100 text-red-600 px-3 py-2 rounded font-bold hover:bg-red-200">Sil</button>

@@ -1,18 +1,36 @@
 
 
-// --- STATE & INITIALIZATION ---
+// --- CONFIGURATION ---
+// DEĞİŞTİR: Supabase Proje URL ve Anon Key
+const SUPABASE_URL = "BURAYA_SUPABASE_PROJECT_URL_YAZIN"; 
+const SUPABASE_ANON_KEY = "BURAYA_SUPABASE_ANON_KEY_YAZIN";
 
+// DEĞİŞTİR: Backend URL (Render'daki adres)
+// Geliştirme ortamında (localhost) 'http://localhost:3000' kullanın.
+// Canlıya (Render) atınca 'https://sizin-app-ismi.onrender.com' yapın.
+const BACKEND_API_URL = "http://localhost:3000"; 
+
+// --- INITIALIZE SUPABASE CLIENT (PUBLIC READ) ---
+let supabase;
+if (typeof createClient !== 'undefined') {
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+    // Fallback in case script isn't loaded yet (though it should be)
+    console.error("Supabase script loaded properly.");
+}
+
+// --- STATE ---
 let state = {
     articles: [],
     categories: [],
     announcement: { text: '', active: false },
-    files: [], 
-    messages: [], 
-    adminConfig: { password: 'admin123' },
+    files: [], // Storage files list (We might fetch differently or keep simplified)
+    messages: [], // Fetched only for admin
+    adminConfig: { password: '' }, // Handled by backend mostly
     ads: { ad1: '', ad2: '' },
     logos: { bal: '', ballab: '', corensan: '' },
-    team: [], // New: Team members
-    teamTags: [], // New: Team tags
+    team: [],
+    teamTags: [],
     isAuthenticated: false,
     darkMode: false, 
     menuOpen: false,
@@ -21,77 +39,88 @@ let state = {
     activeAdminTab: 'dashboard'
 };
 
-// --- DATA FETCHING (SHARED) ---
+// --- DATA FETCHING (HYBRID: SUPABASE DIRECT + BACKEND) ---
 const initApp = async () => {
+    // Theme Init
     const storedTheme = localStorage.getItem('mimos_theme');
     if (storedTheme) {
         state.darkMode = storedTheme === 'dark';
     } else {
         state.darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
-    
     if (state.darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
 
-    // Check Cookie Consent
     checkCookieConsent();
 
     try {
-        const response = await fetch('/api/data');
-        if (!response.ok) throw new Error(`HTTP Hata: ${response.status}`);
+        if(!supabase) throw new Error("Supabase Client not initialized");
+
+        // 1. Fetch Articles (Direct from Supabase)
+        let { data: articles, error: artError } = await supabase
+            .from('articles')
+            .select('*')
+            .order('id', { ascending: false });
         
-        const data = await response.json();
-        
-        state.articles = data.articles || [];
-        state.categories = data.categories || [];
-        state.announcement = data.announcement || { text: '', active: false };
-        state.files = data.files || [];
-        state.messages = data.messages || [];
-        state.adminConfig = data.adminConfig || { password: 'admin123' };
-        state.ads = data.ads || { ad1: '', ad2: '' };
-        state.logos = data.logos || { bal: '', ballab: '', corensan: '' };
-        state.team = data.team || [];
-        state.teamTags = data.teamTags || [];
-        
+        if(artError) throw artError;
+        state.articles = articles || [];
+
+        // 2. Fetch Config (Direct from Supabase)
+        let { data: config, error: confError } = await supabase
+            .from('site_config')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
+        if (confError && confError.code !== 'PGRST116') throw confError; // PGRST116: No rows found
+
+        if (config) {
+            state.categories = config.categories_list || [];
+            state.announcement = config.announcement || { text: '', active: false };
+            state.ads = config.ads || { ad1: '', ad2: '' };
+            state.logos = config.logos || { bal: '', ballab: '', corensan: '' };
+            state.team = config.team || [];
+            state.teamTags = config.team_tags || [];
+        }
+
+        // 3. Routing
         const adminApp = document.getElementById('admin-app');
         const publicApp = document.getElementById('app'); 
         const searchApp = document.getElementById('search-results'); 
         const teamApp = document.getElementById('team-app');
+        const articleDetailContainer = document.getElementById('article-detail-container');
 
         renderSidebarCategories();
         renderAnnouncement();
-        renderLogos(); // Inject logos into DOM
+        renderLogos();
 
         if (adminApp) {
             if(sessionStorage.getItem('admin_auth') === 'true') {
                 state.isAuthenticated = true;
+                // If admin, we might need messages, fetched via backend usually or direct if RLS allows
+                // For simplicity/security, let's keep messages hidden or require backend call
             }
             renderAdmin(adminApp);
         } else if (searchApp) {
             renderSearch(searchApp);
         } else if (teamApp) {
             renderTeam(teamApp);
+        } else if (articleDetailContainer) {
+            renderArticleDetail(articleDetailContainer);
         } else if (publicApp) {
             renderHome(publicApp);
         }
         
     } catch (error) {
         console.error("Veri yükleme hatası:", error);
-        const errorHTML = `
-            <div class="flex items-center justify-center min-h-[50vh]">
-                <div class="p-6 text-center bg-red-50 border border-red-200 rounded-lg max-w-md">
-                    <h2 class="text-lg font-bold text-red-700 mb-2">Bağlantı Hatası</h2>
-                    <p class="text-sm text-red-600">Veriler yüklenemedi. Lütfen sayfayı yenileyin.</p>
-                </div>
-            </div>`;
-        const adminApp = document.getElementById('admin-app');
-        if(adminApp) adminApp.innerHTML = errorHTML;
+        // Error UI logic...
+        const errorHTML = `<p class="text-center p-10 text-red-500">Veriler yüklenemedi. Lütfen bağlantınızı kontrol edin.</p>`;
         const publicApp = document.getElementById('app');
         if(publicApp) publicApp.innerHTML = errorHTML;
     }
 };
 
-// --- COOKIE CONSENT ---
+// --- COOKIE CONSENT (Same as before) ---
 const checkCookieConsent = () => {
     if (!localStorage.getItem('cookie_consent')) {
         const banner = document.createElement('div');
@@ -107,7 +136,7 @@ const checkCookieConsent = () => {
                 <div>
                     <h3 class="font-serif font-bold text-lg mb-2 text-ink dark:text-white">Verilerinize Saygı Duyuyoruz</h3>
                     <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                        Çerezleri yalnızca sitemizi optimize etmek ve hizmetlerimizi geliştirmek için kullanıyoruz. Verilerinizi asla 3. şahıslarla paylaşmıyor, güvenli bir biçimde saklıyoruz.
+                        Çerezleri yalnızca sitemizi optimize etmek ve hizmetlerimizi geliştirmek için kullanıyoruz.
                     </p>
                 </div>
             </div>
@@ -131,7 +160,7 @@ window.acceptCookies = () => {
     }
 };
 
-// --- LOGO RENDERER ---
+// --- LOGO & UI RENDERERS (Same as before) ---
 const renderLogos = () => {
     const setSrc = (id, src) => {
         const el = document.getElementById(id);
@@ -151,7 +180,6 @@ const renderLogos = () => {
     }
 };
 
-// --- COLOR GENERATORS ---
 window.getCategoryStyle = (name) => {
     const colors = [
         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -167,11 +195,12 @@ window.getCategoryStyle = (name) => {
         'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
     ];
     let sum = 0;
-    for (let i = 0; i < name.length; i++) { sum += name.charCodeAt(i); }
+    if(name) {
+        for (let i = 0; i < name.length; i++) { sum += name.charCodeAt(i); }
+    }
     return colors[sum % colors.length];
 };
 
-// --- SHARED UTILS ---
 const toggleTheme = () => {
     state.darkMode = !state.darkMode;
     if (state.darkMode) {
@@ -266,7 +295,7 @@ const renderSidebarCategories = () => {
 };
 
 // ==========================================
-// PUBLIC PAGES
+// PUBLIC PAGES (READING)
 // ==========================================
 
 const parseTurkishDate = (dateStr) => {
@@ -296,22 +325,17 @@ const renderHome = (container) => {
     let pageTitle = "Popüler İçerikler";
 
     if (categoryFilter) {
-        displayArticles = state.articles.filter(a => a.categories.includes(categoryFilter));
+        displayArticles = state.articles.filter(a => a.categories && a.categories.includes(categoryFilter));
         pageTitle = `Kategori: ${categoryFilter}`;
     } else if (yearFilter) {
-        displayArticles = state.articles.filter(a => a.date.includes(yearFilter));
+        displayArticles = state.articles.filter(a => a.date && a.date.includes(yearFilter));
         pageTitle = `Arşiv: ${yearFilter}`;
     }
 
     const now = new Date();
     displayArticles.sort((a, b) => {
-        const dateA = parseTurkishDate(a.date);
-        const dateB = parseTurkishDate(b.date);
-        const daysA = Math.max(0, (now - dateA) / (1000 * 60 * 60 * 24));
-        const daysB = Math.max(0, (now - dateB) / (1000 * 60 * 60 * 24));
-        const scoreA = (a.views || 0) / (daysA + 1);
-        const scoreB = (b.views || 0) / (daysB + 1);
-        return scoreB - scoreA;
+        // Simple sorting for now
+        return (b.id) - (a.id);
     });
     
     // Discovery: Random 4
@@ -331,17 +355,17 @@ const renderHome = (container) => {
                 ${visibleArticles.length === 0 ? '<p class="text-gray-500 italic">Bu kriterlere uygun içerik bulunamadı.</p>' : visibleArticles.map((article) => `
                     <article class="group cursor-pointer grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                         <div class="md:col-span-5 order-2 md:order-1 overflow-hidden rounded-md">
-                            <a href="/articles/${article.id}.html">
-                                <img src="${article.imageUrl}" alt="${article.title}" class="w-full h-64 md:h-56 object-cover transform group-hover:scale-105 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0 bg-gray-100 dark:bg-gray-800">
+                            <a href="/article.html?id=${article.id}">
+                                <img src="${article.image_url}" alt="${article.title}" class="w-full h-64 md:h-56 object-cover transform group-hover:scale-105 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0 bg-gray-100 dark:bg-gray-800">
                             </a>
                         </div>
                         <div class="md:col-span-7 order-1 md:order-2 flex flex-col h-full justify-center">
                             <div class="flex flex-wrap items-center gap-2 mb-3">
-                                ${article.categories.map(cat => `
+                                ${article.categories ? article.categories.map(cat => `
                                     <span class="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded ${window.getCategoryStyle(cat)}">${cat}</span>
-                                `).join('')}
+                                `).join('') : ''}
                             </div>
-                            <a href="/articles/${article.id}.html" class="block">
+                            <a href="/article.html?id=${article.id}" class="block">
                                 <h3 class="text-2xl md:text-3xl font-serif font-bold mb-3 leading-tight group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
                                     ${article.title}
                                 </h3>
@@ -375,15 +399,15 @@ const renderHome = (container) => {
                         </h2>
                         <div class="space-y-8">
                             ${discovery.map(article => `
-                                <a href="/articles/${article.id}.html" class="group flex gap-4 items-start">
+                                <a href="/article.html?id=${article.id}" class="group flex gap-4 items-start">
                                     <div class="w-20 h-20 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-800">
-                                        <img src="${article.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
+                                        <img src="${article.image_url}" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
                                     </div>
                                     <div>
                                         <div class="flex flex-wrap gap-1 mb-1">
-                                            ${article.categories.slice(0, 1).map(cat => `
+                                            ${article.categories ? article.categories.slice(0, 1).map(cat => `
                                                 <span class="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">${cat}</span>
-                                            `).join('')}
+                                            `).join('') : ''}
                                         </div>
                                         <h4 class="font-serif font-bold text-sm leading-snug group-hover:underline decoration-1 underline-offset-4">
                                             ${article.title}
@@ -467,8 +491,8 @@ const renderSearch = (container) => {
                 ${results.length === 0 ? '<p class="text-gray-500 italic">Sonuç bulunamadı.</p>' : results.map((article) => `
                     <article class="group cursor-pointer grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                         <div class="md:col-span-4 order-2 md:order-1 overflow-hidden rounded-md">
-                            <a href="/articles/${article.id}.html">
-                                <img src="${article.imageUrl}" alt="${article.title}" class="w-full h-48 object-cover transform group-hover:scale-105 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0">
+                            <a href="/article.html?id=${article.id}">
+                                <img src="${article.image_url}" alt="${article.title}" class="w-full h-48 object-cover transform group-hover:scale-105 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0">
                             </a>
                         </div>
                         <div class="md:col-span-8 order-1 md:order-2 flex flex-col h-full justify-center">
@@ -477,7 +501,7 @@ const renderSearch = (container) => {
                                     <span class="text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded ${window.getCategoryStyle(cat)}">${cat}</span>
                                 `).join('')}
                             </div>
-                            <a href="/articles/${article.id}.html" class="block">
+                            <a href="/article.html?id=${article.id}" class="block">
                                 <h3 class="text-xl md:text-2xl font-serif font-bold mb-2 leading-tight group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">${article.title}</h3>
                             </a>
                             <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-2 line-clamp-2 text-sm">${article.excerpt}</p>
@@ -489,9 +513,66 @@ const renderSearch = (container) => {
     `;
 };
 
+// --- DYNAMIC ARTICLE RENDERER ---
+const renderArticleDetail = (container) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const articleId = parseInt(urlParams.get('id'));
+
+    if (!articleId) {
+        container.innerHTML = `<div class="text-center py-20"><h1 class="text-2xl font-bold mb-4">Makale bulunamadı.</h1><a href="/" class="text-blue-600 hover:underline">Anasayfaya Dön</a></div>`;
+        return;
+    }
+
+    const article = state.articles.find(a => a.id === articleId);
+
+    if (!article) {
+        container.innerHTML = `<div class="text-center py-20"><h1 class="text-2xl font-bold mb-4">İçerik Bulunamadı</h1><p class="text-gray-500 mb-8">Aradığınız makale silinmiş veya taşınmış olabilir.</p><a href="/" class="bg-black text-white px-6 py-3 rounded-full font-bold">Anasayfaya Dön</a></div>`;
+        return;
+    }
+
+    document.title = `${article.title} - BALLAB`;
+
+    // View Count via Backend (Backend handles DB write)
+    const viewKey = `view_cooldown_${article.id}`;
+    const lastView = localStorage.getItem(viewKey);
+    const now = Date.now();
+    const cooldown = 600000; 
+
+    if (!lastView || now - parseInt(lastView) > cooldown) {
+        fetch(`${BACKEND_API_URL}/api/view/${article.id}`, { method: 'POST' }).catch(e => console.error(e));
+        localStorage.setItem(viewKey, now.toString());
+    }
+
+    container.innerHTML = `
+        <div class="flex justify-between items-center mb-8">
+            <a href="/" class="flex items-center gap-2 text-sm text-gray-500 hover:text-ink dark:hover:text-white transition-colors">← Geri Dön</a>
+            <div class="flex gap-2" id="article-cat-container">
+                ${article.categories.map(c => `
+                    <span class="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded ${window.getCategoryStyle(c)}">${c}</span>
+                `).join('')}
+            </div>
+        </div>
+        
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-5xl font-serif font-black mb-6 leading-tight text-ink dark:text-white">${article.title}</h1>
+            <div class="flex justify-center items-center gap-4 text-sm text-gray-500">
+                <span>${article.author}</span><span>•</span><span>${article.date}</span>
+            </div>
+        </header>
+
+        <div class="mb-12">
+            <img src="${article.image_url}" alt="${article.title}" class="w-full h-auto max-h-[500px] object-cover rounded-lg shadow-sm">
+        </div>
+
+        <div class="prose prose-lg dark:prose-invert mx-auto font-serif text-gray-800 dark:text-gray-300">
+            ${article.content}
+        </div>
+    `;
+};
+
 
 // ==========================================
-// ADMIN PANEL
+// ADMIN PANEL (WRITES TO BACKEND API)
 // ==========================================
 
 const renderAdmin = (container) => {
@@ -512,7 +593,6 @@ const renderAdmin = (container) => {
                     ${renderAdminSidebarButton('articles', 'Makaleler')}
                     ${renderAdminSidebarButton('categories', 'Kategoriler')}
                     ${renderAdminSidebarButton('files', 'Dosyalar')}
-                    ${renderAdminSidebarButton('messages', 'Mesaj Kutusu')}
                     ${renderAdminSidebarButton('team', 'Ekip Yönetimi')}
                     ${renderAdminSidebarButton('settings', 'Ayarlar')}
                 </nav>
@@ -531,6 +611,8 @@ const renderAdmin = (container) => {
         </div>
     `;
 };
+
+// ... Admin Views (These remain largely same in structure, just data binding) ...
 
 const renderAdminSidebarButton = (tab, label) => {
     const isActive = state.activeAdminTab === tab;
@@ -555,7 +637,6 @@ const renderAdminContent = () => {
         case 'articles': return renderArticlesView();
         case 'categories': return renderCategoriesView();
         case 'files': return renderFilesView();
-        case 'messages': return renderMessagesView();
         case 'team': return renderTeamSettingsView();
         case 'settings': return renderSettingsView();
         default: return renderDashboardView();
@@ -564,7 +645,7 @@ const renderAdminContent = () => {
 
 const renderDashboardView = () => `
     <h1 class="text-3xl font-serif font-bold mb-8">Genel Bakış</h1>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
             <h3 class="text-gray-500 text-sm font-bold uppercase mb-2">Toplam Makale</h3>
             <p class="text-4xl font-black">${state.articles.length}</p>
@@ -574,17 +655,13 @@ const renderDashboardView = () => `
             <p class="text-4xl font-black">${state.articles.reduce((acc, curr) => acc + (curr.views || 0), 0)}</p>
         </div>
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-            <h3 class="text-gray-500 text-sm font-bold uppercase mb-2">Dosyalar</h3>
+            <h3 class="text-gray-500 text-sm font-bold uppercase mb-2">Dosyalar (Yaklaşık)</h3>
             <p class="text-4xl font-black">${state.files.length}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-            <h3 class="text-gray-500 text-sm font-bold uppercase mb-2">Mesajlar</h3>
-            <p class="text-4xl font-black">${state.messages.length}</p>
         </div>
     </div>
     <div class="mt-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-900 text-blue-800 dark:text-blue-200">
         <p class="font-bold">Unutmayın!</p>
-        <p class="text-sm mt-1">Yapılan tüm değişikliklerin canlıya alınması için sol menüden <span class="font-bold">KAYDET</span> butonuna basmanız gerekmektedir.</p>
+        <p class="text-sm mt-1">Yapılan tüm değişikliklerin veritabanına işlenmesi için sol menüden <span class="font-bold">KAYDET</span> butonuna basmanız gerekmektedir.</p>
     </div>
 `;
 
@@ -605,7 +682,7 @@ const renderArticlesView = () => {
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <input type="date" name="dateInput" class="w-full p-3 bg-gray-50 dark:bg-gray-900 border rounded text-gray-500">
-                    <input name="imageUrl" placeholder="Kapak Görseli URL" value="${editArticle ? editArticle.imageUrl : ''}" class="w-full p-3 bg-gray-50 dark:bg-gray-900 border rounded">
+                    <input name="imageUrl" placeholder="Kapak Görseli URL" value="${editArticle ? editArticle.image_url : ''}" class="w-full p-3 bg-gray-50 dark:bg-gray-900 border rounded">
             </div>
             <div>
                 <label class="block text-sm font-bold mb-2 text-gray-500">Kategoriler</label>
@@ -613,7 +690,7 @@ const renderArticlesView = () => {
                     ${state.categories.map(c => `
                         <label class="flex items-center space-x-2 cursor-pointer">
                             <input type="checkbox" name="categories" value="${c.name}" class="rounded w-4 h-4" 
-                                ${(editArticle && editArticle.categories.includes(c.name)) ? 'checked' : ''}>
+                                ${(editArticle && editArticle.categories && editArticle.categories.includes(c.name)) ? 'checked' : ''}>
                             <span class="text-sm">${c.name}</span>
                         </label>
                     `).join('')}
@@ -710,39 +787,8 @@ const renderFilesView = () => `
     </div>
 `;
 
-const renderMessagesView = () => `
-    <h1 class="text-3xl font-serif font-bold mb-8">Mesaj Kutusu</h1>
-    <div class="space-y-4">
-        ${state.messages.length === 0 ? '<p class="text-gray-500">Henüz mesaj yok.</p>' : state.messages.map(m => `
-            <details class="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 group">
-                <summary class="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition list-none">
-                    <div class="flex items-center gap-4">
-                        <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <div>
-                            <div class="font-bold text-lg">${m.subject || 'Konusuz'}</div>
-                            <div class="text-xs text-gray-500">${m.name} &bull; ${m.date}</div>
-                        </div>
-                    </div>
-                    <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                </summary>
-                <div class="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                    <div class="mb-4 text-sm">
-                        <span class="font-bold text-gray-500 block text-xs uppercase mb-1">Gönderen</span>
-                        ${m.name} <a href="mailto:${m.email}" class="text-blue-500 hover:underline">&lt;${m.email}&gt;</a>
-                    </div>
-                    <div class="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">${m.message}</div>
-                    <div class="mt-6 flex justify-end">
-                        <button onclick="handleDeleteMessage(${m.id})" class="text-xs text-red-500 hover:bg-red-50 px-3 py-2 rounded">Mesajı Sil</button>
-                    </div>
-                </div>
-            </details>
-        `).join('')}
-    </div>
-`;
-
 const renderTeamSettingsView = () => `
     <h1 class="text-3xl font-serif font-bold mb-8">Ekip Yönetimi</h1>
-    
     <!-- Tag Management -->
     <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
         <h2 class="text-lg font-serif font-bold mb-4">Etiket Havuzu</h2>
@@ -823,57 +869,9 @@ const renderSettingsView = () => `
                 <button class="w-full py-3 bg-red-600 text-white rounded font-bold hover:bg-red-700 transition">ŞİFREYİ GÜNCELLE</button>
             </form>
         </div>
-
-        <!-- Logo Management -->
-        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <h2 class="text-lg font-serif font-bold mb-4">Logo Yönetimi</h2>
-            <div class="space-y-6">
-                <!-- BAL Logo -->
-                <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BAL Logosu (Sol Navbar, Sidebar Alt & Footer)</label>
-                    <div class="flex gap-4 items-start mb-2">
-                        ${state.logos.bal ? `<img src="${state.logos.bal}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
-                        <div class="flex-grow space-y-2">
-                            <input id="logo-bal-url" value="${state.logos.bal}" placeholder="URL veya Dosya Yükle" class="w-full p-2 text-sm border rounded">
-                            <div class="flex gap-2">
-                                <input type="file" onchange="handleLogoUpload(event, 'bal')" class="text-xs">
-                                <button onclick="updateLogoUrl('bal')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded font-bold">GÜNCELLE</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- BALLAB Logo -->
-                <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">BALLAB Logosu (Favicon & Footer Sağ Üst)</label>
-                    <div class="flex gap-4 items-start mb-2">
-                        ${state.logos.ballab ? `<img src="${state.logos.ballab}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
-                        <div class="flex-grow space-y-2">
-                            <input id="logo-ballab-url" value="${state.logos.ballab}" placeholder="URL veya Dosya Yükle" class="w-full p-2 text-sm border rounded">
-                            <div class="flex gap-2">
-                                <input type="file" onchange="handleLogoUpload(event, 'ballab')" class="text-xs">
-                                <button onclick="updateLogoUrl('ballab')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded font-bold">GÜNCELLE</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Corensan Logo -->
-                <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">Corensan Logosu (Footer Alt Geniş)</label>
-                    <div class="flex gap-4 items-start mb-2">
-                        ${state.logos.corensan ? `<img src="${state.logos.corensan}" class="w-20 h-20 object-contain rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
-                        <div class="flex-grow space-y-2">
-                            <input id="logo-corensan-url" value="${state.logos.corensan}" placeholder="URL veya Dosya Yükle" class="w-full p-2 text-sm border rounded">
-                            <div class="flex gap-2">
-                                <input type="file" onchange="handleLogoUpload(event, 'corensan')" class="text-xs">
-                                <button onclick="updateLogoUrl('corensan')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded font-bold">GÜNCELLE</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Ad Management -->
+        
+        <!-- Logo & Ads management can be similar to before, calling upload and updating state -->
+         <!-- Ad Management -->
         <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
             <h2 class="text-lg font-serif font-bold mb-4">Reklam Yönetimi</h2>
             <div class="space-y-6">
@@ -891,22 +889,9 @@ const renderSettingsView = () => `
                         </div>
                     </div>
                 </div>
-                <!-- AD 2 -->
-                <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded border">
-                    <label class="block text-xs font-bold mb-2 uppercase text-gray-500">Reklam 2 (Alt)</label>
-                    <div class="flex gap-4 items-start mb-2">
-                        ${state.ads.ad2 ? `<img src="${state.ads.ad2}" class="w-20 h-20 object-cover rounded bg-white">` : '<div class="w-20 h-20 bg-gray-200 rounded"></div>'}
-                        <div class="flex-grow space-y-2">
-                            <input id="ad2-url" value="${state.ads.ad2}" placeholder="Görsel URL'si yapıştırın veya dosya seçin" class="w-full p-2 text-sm border rounded">
-                            <div class="flex gap-2">
-                                <input type="file" id="ad2-file" onchange="handleAdFileUpload(event, 'ad2')" class="text-xs">
-                                <button onclick="updateAdUrl('ad2')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded font-bold">GÜNCELLE</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
+
     </div>
 `;
 
@@ -924,17 +909,31 @@ const renderLogin = () => `
     </div>
 `;
 
-// --- HANDLERS (ADMIN) ---
+// --- HANDLERS (ADMIN TO BACKEND) ---
 
-window.handleLogin = (e) => {
+window.handleLogin = async (e) => {
     e.preventDefault();
     const pass = document.getElementById('admin-pass').value;
-    // Check against config loaded from server
-    if (pass === state.adminConfig.password) {
-        state.isAuthenticated = true;
-        sessionStorage.setItem('admin_auth', 'true');
-        renderAdmin(document.getElementById('admin-app'));
-    } else { alert('Hatalı şifre!'); }
+    
+    // Call Backend
+    try {
+        const res = await fetch(`${BACKEND_API_URL}/api/login`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ password: pass })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            state.isAuthenticated = true;
+            sessionStorage.setItem('admin_auth', 'true');
+            renderAdmin(document.getElementById('admin-app'));
+        } else {
+            alert('Hatalı şifre!');
+        }
+    } catch (e) {
+        alert("Bağlantı hatası: Backend çalışıyor mu?");
+    }
 };
 
 window.handleLogout = () => {
@@ -944,54 +943,104 @@ window.handleLogout = () => {
 };
 
 window.saveChanges = async () => {
-    const exportData = { 
-        articles: state.articles, 
-        categories: state.categories, 
-        announcement: state.announcement, 
-        files: state.files, 
-        messages: state.messages,
-        adminConfig: state.adminConfig, 
+    // Send Current State to Backend to Upsert Supabase
+    const payload = {
+        articles: state.articles,
+        categories: state.categories,
+        announcement: state.announcement,
         ads: state.ads,
         logos: state.logos,
         team: state.team,
-        teamTags: state.teamTags
+        teamTags: state.teamTags,
+        // Config password is mostly read-only here except update
     };
+
     try {
-        const response = await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(exportData) });
-        if (response.ok) alert("Değişiklikler kaydedildi!");
+        const response = await fetch(`${BACKEND_API_URL}/api/sync`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+        });
+        if (response.ok) alert("Tüm değişiklikler veritabanına kaydedildi!");
         else alert("Hata: Kaydedilemedi.");
     } catch (error) { alert("Sunucu iletişim hatası."); }
 };
 
-// ... (Article Handlers same as before) ...
 window.handleEditArticle = (id) => { state.editingId = id; state.activeAdminTab = 'articles'; renderAdmin(document.getElementById('admin-app')); };
 window.cancelEdit = () => { state.editingId = null; renderAdmin(document.getElementById('admin-app')); };
-window.handleAddArticle = (e) => { /* Same as previous logic */ 
+window.handleAddArticle = (e) => { 
     e.preventDefault();
     const formData = new FormData(e.target);
     const selectedCategories = [];
     document.querySelectorAll('input[name="categories"]:checked').forEach((checkbox) => selectedCategories.push(checkbox.value));
     if (selectedCategories.length === 0) { alert("Kategori seçiniz."); return; }
+    
     let articleDateStr = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
     const dateInput = formData.get('dateInput');
     if (dateInput) { const d = new Date(dateInput); articleDateStr = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }); } 
     else if (state.editingId) { const old = state.articles.find(a => a.id === state.editingId); if(old) articleDateStr = old.date; }
-    const articleData = { title: formData.get('title'), author: formData.get('author'), categories: selectedCategories, imageUrl: formData.get('imageUrl'), content: formData.get('content'), excerpt: formData.get('content').replace(/<[^>]*>?/gm, '').substring(0, 100) + '...', date: articleDateStr, views: state.editingId ? (state.articles.find(a => a.id === state.editingId)?.views || 0) : 0 };
-    if (state.editingId) { const index = state.articles.findIndex(a => a.id === state.editingId); if (index !== -1) { state.articles[index] = { ...state.articles[index], ...articleData }; alert('Güncellendi. "KAYDET" butonuna basınız.'); } state.editingId = null; } else { state.articles.unshift({ id: Date.now(), ...articleData }); alert('Eklendi. "KAYDET" butonuna basınız.'); }
+    
+    const articleData = { 
+        title: formData.get('title'), 
+        author: formData.get('author'), 
+        categories: selectedCategories, 
+        image_url: formData.get('imageUrl'), // Supabase column is image_url
+        content: formData.get('content'), 
+        excerpt: formData.get('content').replace(/<[^>]*>?/gm, '').substring(0, 100) + '...', 
+        date: articleDateStr, 
+        views: state.editingId ? (state.articles.find(a => a.id === state.editingId)?.views || 0) : 0 
+    };
+    
+    // Frontend state update instantly for UI
+    if (state.editingId) { 
+        const index = state.articles.findIndex(a => a.id === state.editingId); 
+        if (index !== -1) { state.articles[index] = { ...state.articles[index], ...articleData }; alert('Güncellendi. "KAYDET" butonuna basınız.'); } 
+        state.editingId = null; 
+    } else { 
+        state.articles.unshift({ id: Date.now(), ...articleData }); 
+        alert('Eklendi. "KAYDET" butonuna basınız.'); 
+    }
     renderAdmin(document.getElementById('admin-app'));
 };
-window.handleDeleteArticle = (id) => { if (confirm('Silinecek?')) { state.articles = state.articles.filter(a => a.id !== id); if(state.editingId === id) state.editingId = null; renderAdmin(document.getElementById('admin-app')); } };
+
+window.handleDeleteArticle = async (id) => { 
+    if (confirm('Silinecek? (Bu işlem hemen gerçekleşir)')) { 
+        // Backend API Delete
+        await fetch(`${BACKEND_API_URL}/api/articles/${id}`, { method: 'DELETE' });
+        
+        state.articles = state.articles.filter(a => a.id !== id); 
+        if(state.editingId === id) state.editingId = null; 
+        renderAdmin(document.getElementById('admin-app')); 
+    } 
+};
+
+// Handlers for categories, files, team, etc.
 window.handleAddCategory = (e) => { e.preventDefault(); const formData = new FormData(e.target); const name = formData.get('catName'); if (name) { state.categories.push({ id: Date.now(), name: name, type: formData.get('catType') }); renderAdmin(document.getElementById('admin-app')); } };
 window.handleDeleteCategory = (id) => { if (confirm('Silinecek?')) { state.categories = state.categories.filter(c => c.id !== id); renderAdmin(document.getElementById('admin-app')); } };
 window.handleUpdateAnnouncement = (e) => { e.preventDefault(); state.announcement.text = document.getElementById('announcement-text').value; renderAdmin(document.getElementById('admin-app')); alert('Güncellendi. Kaydetmeyi unutmayın.'); };
 window.toggleAnnouncementActive = () => { state.announcement.active = !state.announcement.active; renderAdmin(document.getElementById('admin-app')); };
-window.handleFileUpload = async (e) => { e.preventDefault(); const fileInput = document.getElementById('file-input'); const fileNameInput = document.getElementById('file-name'); if (fileInput.files && fileInput.files[0]) { const formData = new FormData(); formData.append('file', fileInput.files[0]); try { const res = await fetch('/api/upload', { method: 'POST', body: formData }); if(res.ok) { const result = await res.json(); state.files.push({ id: Date.now(), name: fileNameInput.value || fileInput.files[0].name, data: result.url }); alert('Yüklendi! Kaydedin.'); renderAdmin(document.getElementById('admin-app')); } else alert("Hata."); } catch (err) { alert("Hata."); } } };
+
+window.handleFileUpload = async (e) => { 
+    e.preventDefault(); 
+    const fileInput = document.getElementById('file-input'); 
+    const fileNameInput = document.getElementById('file-name'); 
+    if (fileInput.files && fileInput.files[0]) { 
+        const formData = new FormData(); 
+        formData.append('file', fileInput.files[0]); 
+        try { 
+            const res = await fetch(`${BACKEND_API_URL}/api/upload`, { method: 'POST', body: formData }); 
+            if(res.ok) { 
+                const result = await res.json(); 
+                state.files.push({ id: Date.now(), name: fileNameInput.value || fileInput.files[0].name, data: result.url }); 
+                alert('Yüklendi! Kaydedin.'); 
+                renderAdmin(document.getElementById('admin-app')); 
+            } else alert("Hata."); 
+        } catch (err) { alert("Hata."); } 
+    } 
+};
 window.handleDeleteFile = (id) => { if(confirm("Silinecek?")) { state.files = state.files.filter(f => f.id !== id); renderAdmin(document.getElementById('admin-app')); } };
 window.copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => alert("URL Kopyalandı!"));
-window.handleDeleteMessage = (id) => { if(confirm("Mesaj silinsin mi?")) { state.messages = state.messages.filter(m => m.id !== id); renderAdmin(document.getElementById('admin-app')); alert("Mesaj kaldırıldı. Değişikliği kalıcı yapmak için 'KAYDET' butonuna basın."); } };
-window.handleSendMessage = async (e) => { e.preventDefault(); const formData = new FormData(e.target); const messageData = { name: formData.get('name'), email: formData.get('email'), subject: formData.get('subject'), message: formData.get('message') }; try { const res = await fetch('/api/contact', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(messageData) }); if(res.ok) { alert("Mesajınız iletildi! Teşekkürler."); e.target.reset(); } else { alert("Bir hata oluştu."); } } catch(err) { alert("Bağlantı hatası."); } };
-
-// --- NEW HANDLERS FOR SETTINGS & LOGOS ---
+window.handleSendMessage = async (e) => { e.preventDefault(); const formData = new FormData(e.target); const messageData = { name: formData.get('name'), email: formData.get('email'), subject: formData.get('subject'), message: formData.get('message') }; try { const res = await fetch(`${BACKEND_API_URL}/api/contact`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(messageData) }); if(res.ok) { alert("Mesajınız iletildi! Teşekkürler."); e.target.reset(); } else { alert("Bir hata oluştu."); } } catch(err) { alert("Bağlantı hatası."); } };
 
 window.handleUpdatePassword = (e) => {
     e.preventDefault();
@@ -1012,7 +1061,7 @@ window.handleAdFileUpload = async (e, adKey) => {
     const formData = new FormData();
     formData.append('file', file);
     try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await fetch(`${BACKEND_API_URL}/api/upload`, { method: 'POST', body: formData });
         if(res.ok) {
             const result = await res.json();
             state.ads[adKey] = result.url;
@@ -1028,31 +1077,6 @@ window.updateAdUrl = (adKey) => {
     alert("Reklam URL güncellendi. 'KAYDET' yapmayı unutmayın.");
 };
 
-window.handleLogoUpload = async (e, logoKey) => {
-    const file = e.target.files[0];
-    if(!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
-        if(res.ok) {
-            const result = await res.json();
-            state.logos[logoKey] = result.url;
-            renderAdmin(document.getElementById('admin-app'));
-            renderLogos(); // Live preview update
-        } else alert("Yükleme hatası");
-    } catch(err) { alert("Hata"); }
-};
-
-window.updateLogoUrl = (logoKey) => {
-    const url = document.getElementById('logo-' + logoKey + '-url').value;
-    state.logos[logoKey] = url;
-    renderAdmin(document.getElementById('admin-app'));
-    renderLogos();
-    alert("Logo URL güncellendi. 'KAYDET' yapmayı unutmayın.");
-};
-
-// --- TEAM HANDLERS ---
 window.handleAddTeamTag = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);

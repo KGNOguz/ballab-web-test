@@ -1,377 +1,162 @@
 
-
+require('dotenv').config();
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const multer = require('multer');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Directories
-const DATA_FILE = path.join(__dirname, 'data.json');
-const RESOURCES_DIR = path.join(__dirname, 'resources');
-const ARTICLES_DIR = path.join(__dirname, 'articles');
+// --- SUPABASE CONFIG ---
+// Render Environment Variables kısmına bu keyleri ekleyin.
+const SUPABASE_URL = process.env.SUPABASE_URL || 'BURAYA_SUPABASE_URL_YAZIN';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'BURAYA_SUPABASE_SERVICE_ROLE_KEY_YAZIN'; 
+// DİKKAT: Backend tarafında Service Key kullanıyoruz ki yazma yetkimiz olsun.
 
-// --- SETUP DIRS ---
-if (!fs.existsSync(RESOURCES_DIR)) fs.mkdirSync(RESOURCES_DIR, { recursive: true });
-if (!fs.existsSync(ARTICLES_DIR)) fs.mkdirSync(ARTICLES_DIR, { recursive: true });
-
-// Initialize Data File if not exists or empty
-if (!fs.existsSync(DATA_FILE)) {
-    const initialData = { 
-        articles: [], 
-        categories: [], 
-        announcement: { text: "Yayındayız!", active: true }, 
-        files: [], 
-        messages: [],
-        adminConfig: { password: "admin123" }, 
-        ads: {
-            ad1: "https://placehold.co/400x300?text=REKLAM+ALANI+1",
-            ad2: "https://placehold.co/400x300?text=REKLAM+ALANI+2"
-        },
-        logos: {
-            bal: "/resources/bal-logo.png",
-            ballab: "/resources/ballab-logo.png", 
-            corensan: "/resources/corensan-logo.png"
-        },
-        team: [],
-        teamTags: ["Editör", "Tasarım", "Yazılım", "İçerik"]
-    };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
-}
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // --- MIDDLEWARE ---
-app.use(cors());
+app.use(cors()); // Frontend Netlify'da olacağı için CORS önemli
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
+// --- MEMORY STORAGE FOR UPLOADS ---
+// Dosyaları diske değil RAM'e alıp oradan Supabase'e atacağız (Render disk sorunu yaşamamak için)
+const upload = multer({ storage: multer.memoryStorage() });
+
 // --- API ENDPOINTS ---
 
-// 1. Get Data
-app.get('/api/data', (req, res) => {
-    fs.readFile(DATA_FILE, 'utf8', (err, data) => {
-        if (err) {
-            return res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {}, logos: {}, team: [], teamTags: [] });
-        }
-        try { 
-            const json = JSON.parse(data);
-            // Ensure structure exists for older data files
-            if(!json.messages) json.messages = []; 
-            if(!json.adminConfig) json.adminConfig = { password: "admin123" };
-            if(!json.ads) json.ads = { ad1: "", ad2: "" };
-            if(!json.logos) json.logos = { bal: "", ballab: "", corensan: "" };
-            if(!json.team) json.team = [];
-            if(!json.teamTags) json.teamTags = ["Editör", "Tasarım", "Yazılım"];
-            res.json(json); 
-        } catch (e) { 
-            res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {}, logos: {}, team: [], teamTags: [] }); 
-        }
-    });
-});
-
-// 2. Save Data (General)
-app.post('/api/data', (req, res) => {
-    const newData = req.body;
-    
-    fs.writeFile(DATA_FILE, JSON.stringify(newData, null, 2), (err) => {
-        if (err) return res.status(500).json({ error: 'Veri kaydedilemedi' });
+// 1. Admin Login (Basit şifre kontrolü - Config tablosundan çeker)
+app.post('/api/login', async (req, res) => {
+    const { password } = req.body;
+    try {
+        const { data, error } = await supabase
+            .from('site_config')
+            .select('admin_password')
+            .eq('id', 1)
+            .single();
         
-        try {
-            if (newData.articles && Array.isArray(newData.articles)) {
-                newData.articles.forEach(article => {
-                    const filePath = path.join(ARTICLES_DIR, `${article.id}.html`);
-                    const htmlContent = generateArticleHTML(article);
-                    fs.writeFileSync(filePath, htmlContent);
-                });
-            }
-            res.json({ success: true, message: 'Kaydedildi.' });
-        } catch (genErr) {
-            res.status(500).json({ error: 'HTML hatası.' });
+        if (error || !data) return res.status(401).json({ success: false });
+
+        if (password === data.admin_password) {
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ success: false, message: "Hatalı şifre" });
         }
-    });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
-// 3. Save New Message (Contact Form)
-app.post('/api/contact', (req, res) => {
+// 2. Full Sync (Admin panelinden gelen toplu kaydetme isteği)
+// Not: Frontend admin paneli hala "state" mantığıyla çalıştığı için,
+// tüm veriyi alıp ilgili tablolara dağıtıyoruz.
+app.post('/api/sync', async (req, res) => {
+    const { articles, categories, announcement, ads, logos, team, teamTags, adminConfig } = req.body;
+
+    try {
+        // A. Makaleleri Güncelle (Upsert)
+        // Articles array'ini Supabase formatına uygun hale getirelim gerekirse
+        if (articles && articles.length > 0) {
+            const { error: artError } = await supabase
+                .from('articles')
+                .upsert(articles); // ID çakışırsa günceller, yoksa ekler
+            if (artError) throw artError;
+        }
+
+        // B. Site Config Güncelle
+        const { error: confError } = await supabase
+            .from('site_config')
+            .upsert({
+                id: 1,
+                categories_list: categories,
+                announcement: announcement,
+                ads: ads,
+                logos: logos,
+                team: team,
+                team_tags: teamTags,
+                admin_password: adminConfig ? adminConfig.password : undefined
+            });
+        
+        if (confError) throw confError;
+
+        res.json({ success: true, message: "Tüm veriler eşitlendi." });
+    } catch (e) {
+        console.error("Sync Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 3. Delete Article
+app.delete('/api/articles/:id', async (req, res) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('articles').delete().eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+});
+
+// 4. File Upload (Supabase Storage)
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Dosya yok' });
+
+    try {
+        // Dosya ismini benzersiz yap
+        const fileExt = req.file.originalname.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { data, error } = await supabase
+            .storage
+            .from('resources') // Supabase'de oluşturduğunuz bucket adı
+            .upload(fileName, req.file.buffer, {
+                contentType: req.file.mimetype
+            });
+
+        if (error) throw error;
+
+        // Public URL oluştur
+        const { data: publicData } = supabase
+            .storage
+            .from('resources')
+            .getPublicUrl(fileName);
+
+        res.json({ success: true, url: publicData.publicUrl });
+    } catch (e) {
+        console.error("Upload Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 5. Contact Message
+app.post('/api/contact', async (req, res) => {
     const message = req.body;
     message.id = Date.now();
     message.date = new Date().toLocaleDateString('tr-TR');
-
-    fs.readFile(DATA_FILE, 'utf8', (err, data) => {
-        if (err) return res.status(500).json({error: 'Read error'});
-        try {
-            const jsonData = JSON.parse(data);
-            if (!jsonData.messages) jsonData.messages = [];
-            jsonData.messages.unshift(message); // Add to top
-            
-            fs.writeFile(DATA_FILE, JSON.stringify(jsonData, null, 2), (wErr) => {
-                if(wErr) return res.status(500).json({error: 'Write error'});
-                res.json({success: true});
-            });
-        } catch(e) {
-            res.status(500).json({error: 'Parse error'});
-        }
-    });
+    
+    const { error } = await supabase.from('messages').insert(message);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
 });
 
-// 4. View Count
-app.post('/api/view/:id', (req, res) => {
-    const articleId = parseInt(req.params.id);
-    fs.readFile(DATA_FILE, 'utf8', (err, data) => {
-        if (err) return res.status(500).json({error: 'Read error'});
-        try {
-            const jsonData = JSON.parse(data);
-            const article = jsonData.articles.find(a => a.id === articleId);
-            if(article) {
-                article.views = (article.views || 0) + 1;
-                fs.writeFile(DATA_FILE, JSON.stringify(jsonData, null, 2), (wErr) => {
-                    if(wErr) return res.status(500).json({error: 'Write error'});
-                    res.json({success: true, views: article.views});
-                });
-            } else {
-                res.status(404).json({error: 'Not found'});
-            }
-        } catch(e) {
-            res.status(500).json({error: 'Parse error'});
-        }
-    });
-});
-
-// 5. Upload
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) { cb(null, RESOURCES_DIR) },
-    filename: function (req, file, cb) {
-        const ext = path.extname(file.originalname);
-        const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
-        cb(null, name + '-' + Date.now() + ext)
+// 6. View Count Increment (Frontend directly can't easily do atomic increments without RPC, simple update here)
+app.post('/api/view/:id', async (req, res) => {
+    const { id } = req.params;
+    
+    // Önce mevcut değeri al
+    const { data: article } = await supabase.from('articles').select('views').eq('id', id).single();
+    if (article) {
+        const newViews = (article.views || 0) + 1;
+        await supabase.from('articles').update({ views: newViews }).eq('id', id);
+        res.json({ success: true, views: newViews });
+    } else {
+        res.status(404).json({ error: 'Not found' });
     }
-})
-const upload = multer({ storage: storage });
-app.post('/api/upload', upload.single('file'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'Dosya yüklenemedi' });
-    const fileUrl = `/resources/${req.file.filename}`;
-    res.json({ success: true, url: fileUrl, filename: req.file.filename });
 });
 
-// --- SERVE STATIC ---
-app.use('/resources', express.static(RESOURCES_DIR)); 
-app.use('/articles', express.static(ARTICLES_DIR)); 
-app.use(express.static(__dirname)); 
-
-// --- TEMPLATE ---
-const generateArticleHTML = (article) => {
-    return `
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${article.title} - BALLAB</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" id="dynamic-favicon" href="/resources/ballab-logo.png">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'], serif: ['Merriweather', 'serif'] },
-                    colors: { paper: '#ffffff', ink: '#111111' }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { -webkit-font-smoothing: antialiased; }
-        .prose p { margin-bottom: 1.5em; line-height: 1.8; }
-        .prose img { border-radius: 8px; margin: 2em auto; }
-        .prose h2 { font-size: 1.5em; font-weight: bold; margin-top: 2em; margin-bottom: 1em; }
-    </style>
-</head>
-<body class="bg-paper text-ink dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 flex flex-col min-h-screen">
-    
-    <nav class="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <div class="flex items-center">
-                     <button id="menu-btn" class="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group">
-                        <svg class="group-hover:text-blue-600 transition-colors" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                        <span class="hidden md:inline text-sm font-medium text-gray-500 group-hover:text-blue-600">Menü</span>
-                    </button>
-                </div>
-                
-                <!-- Center: Logo Group -->
-                <a href="/" class="absolute left-1/2 transform -translate-x-1/2 flex items-center h-full gap-4 group cursor-pointer select-none">
-                    <!-- BAL Logo -->
-                    <img id="nav-logo-bal" src="/resources/bal-logo.png" alt="BAL Logo" class="h-10 w-auto object-contain dark:invert transition-all duration-300">
-                    
-                    <!-- Divider -->
-                    <div class="h-8 w-[1.5px] bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                    
-                    <!-- BALLAB Text -->
-                    <span class="text-2xl md:text-3xl font-serif font-black tracking-tighter pb-1">BALLAB</span>
-                </a>
-
-                <div class="flex items-center gap-4">
-                     <form onsubmit="handleSearch(event)" class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1 pl-4 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all">
-                        <input type="text" name="q" placeholder="Ara..." class="bg-transparent text-sm focus:outline-none w-32 focus:w-48 transition-all placeholder-gray-500 dark:placeholder-gray-400">
-                        <button type="submit" class="bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 p-2 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        </button>
-                    </form>
-                     <button id="theme-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 flex items-center">
-                        <svg id="icon-sun" class="hidden dark:block" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                        <svg id="icon-moon" class="block dark:hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
-    <aside id="sidebar" class="fixed inset-y-0 left-0 w-80 bg-white dark:bg-gray-900 z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col border-r border-gray-100 dark:border-gray-800">
-        <div class="p-6 flex justify-between items-center border-b border-gray-100 dark:border-gray-800 h-20">
-            <span class="font-serif text-xl font-bold tracking-tight">Menü</span>
-            <button id="sidebar-close" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-        </div>
-        <div class="p-8 flex-grow overflow-y-auto custom-scrollbar">
-             <form onsubmit="handleSearch(event)" class="mb-8 block md:hidden">
-                <div class="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all">
-                    <input type="text" name="q" placeholder="İçerik ara..." class="w-full bg-transparent text-sm px-4 py-2 rounded-full focus:outline-none placeholder-gray-500">
-                    <button type="submit" class="bg-gray-300 dark:bg-gray-600 px-3 py-2 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    </button>
-                </div>
-            </form>
-            <nav class="flex flex-col gap-4 mb-10">
-                <a href="/" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Anasayfa</a>
-                <a href="/about.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Hakkımızda</a>
-                <a href="/school.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Okulumuz</a>
-                <a href="/team.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Ekibimiz</a>
-                <a href="/contact.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">İletişim</a>
-            </nav>
-            <div id="sidebar-categories" class="pt-6 border-t border-gray-100 dark:border-gray-800"></div>
-        </div>
-        <div class="p-6 border-t border-gray-100 dark:border-gray-800">
-             <div class="flex gap-4 justify-center opacity-50">
-                <!-- Sidebar Footer BAL Logo -->
-                <img id="sidebar-logo-bal" src="/resources/bal-logo.png" alt="BAL" class="w-8 h-8 opacity-50 hover:opacity-100 transition-opacity dark:invert object-contain">
-             </div>
-        </div>
-    </aside>
-
-    <main class="flex-grow w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="flex justify-between items-center mb-8">
-            <a href="/" class="flex items-center gap-2 text-sm text-gray-500 hover:text-ink dark:hover:text-white transition-colors">← Geri Dön</a>
-            <div class="flex gap-2" id="cat-container"></div>
-        </div>
-        
-        <header class="text-center mb-10">
-            <h1 class="text-3xl md:text-5xl font-serif font-black mb-6 leading-tight text-ink dark:text-white">${article.title}</h1>
-            <div class="flex justify-center items-center gap-4 text-sm text-gray-500">
-                <span>${article.author}</span><span>•</span><span>${article.date}</span>
-            </div>
-        </header>
-
-        <div class="mb-12">
-            <img src="${article.imageUrl}" alt="${article.title}" class="w-full h-auto max-h-[500px] object-cover rounded-lg shadow-sm">
-        </div>
-
-        <div class="prose prose-lg dark:prose-invert mx-auto font-serif text-gray-800 dark:text-gray-300">
-            ${article.content}
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pt-16 pb-12 mt-auto transition-colors duration-300">
-        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
-            <!-- Left: Brand & Social -->
-            <div class="flex flex-col items-center md:items-start text-center md:text-left space-y-6">
-                <div>
-                    <h2 class="text-5xl font-serif font-black tracking-tighter text-ink dark:text-white mb-2">BALLAB</h2>
-                    <p class="text-sm text-gray-500 max-w-xs mx-auto md:mx-0">
-                        © BALLAB ve © Bursa Anadolu Lisesi. Tüm hakları saklıdır.
-                    </p>
-                </div>
-                <!-- Social Icons -->
-                <div class="flex gap-6">
-                    <a href="https://www.instagram.com/ballab_bilim_dergisi" target="_blank" class="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Center: Navigation -->
-            <div class="flex flex-col items-center justify-start space-y-4 pt-2">
-                <a href="/" class="text-lg font-medium hover:text-blue-600 transition-colors">Anasayfa</a>
-                <a href="/about.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Hakkımızda</a>
-                <a href="/contact.html" class="text-lg font-medium hover:text-blue-600 transition-colors">İletişim</a>
-                <a href="/school.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Okulumuz</a>
-                <a href="/team.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Ekibimiz</a>
-                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 w-32 text-center">
-                    <a href="https://bursaanadolulisesi.meb.k12.tr/" target="_blank" class="text-xs text-gray-500 hover:text-black dark:hover:text-white font-bold transition-colors uppercase tracking-wider">
-                        Bursa Anadolu Lisesi
-                    </a>
-                </div>
-            </div>
-
-            <!-- Right: Logos -->
-            <div class="flex flex-col items-center md:items-end justify-center md:justify-start gap-4 w-full md:w-auto mt-8 md:mt-0">
-                <div class="grid grid-cols-2 gap-4 w-64 md:w-56">
-                    <div class="aspect-square flex items-center justify-center">
-                        <a href="https://bursaanadolulisesi.meb.k12.tr/" target="_blank" class="w-full h-full block">
-                            <img id="footer-logo-bal" src="/resources/bal-logo.png" class="w-full h-full object-contain dark:invert transition-all hover:scale-105 duration-300">
-                        </a>
-                    </div>
-                    <div class="aspect-square flex items-center justify-center">
-                        <img id="footer-logo-ballab" src="/resources/ballab-logo.png" class="w-full h-full object-contain dark:invert transition-all hover:scale-105 duration-300">
-                    </div>
-                </div>
-                <div class="w-64 md:w-56 flex items-center justify-center mt-2">
-                    <img id="footer-logo-corensan" src="/resources/corensan-logo.png" class="w-full h-auto object-contain dark:invert transition-all hover:opacity-80">
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <script src="/index.js"></script>
-    <script>
-        // VIEW COUNT WITH COOLDOWN (10 mins)
-        const viewKey = 'view_cooldown_${article.id}';
-        const lastView = localStorage.getItem(viewKey);
-        const now = Date.now();
-        const cooldown = 600000; // 10 minutes
-
-        if (!lastView || now - parseInt(lastView) > cooldown) {
-            fetch('/api/view/${article.id}', { method: 'POST' }).catch(e => console.error(e));
-            localStorage.setItem(viewKey, now.toString());
-        }
-
-        // Client side color logic for article page
-        const cats = ${JSON.stringify(article.categories)};
-        const container = document.getElementById('cat-container');
-        if(container && cats) {
-            cats.forEach(c => {
-                 const span = document.createElement('span');
-                 span.className = "text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded " + getCategoryStyle(c);
-                 span.innerText = c;
-                 container.appendChild(span);
-            });
-        }
-    </script>
-</body>
-</html>
-    `;
-};
+// Kök dizin (Canlı olduğunu anlamak için)
+app.get('/', (req, res) => res.send('BALLAB Backend is Live!'));
 
 app.listen(PORT, () => {
-    console.log(`Server çalışıyor: Port ${PORT}`);
+    console.log(`Backend Server running on port ${PORT}`);
 });

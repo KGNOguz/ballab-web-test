@@ -1,7 +1,7 @@
 {
   "name": "mimos-dergi",
-  "version": "1.0.0",
-  "description": "Minimalist Dergi Sitesi Backend",
+  "version": "2.0.0",
+  "description": "Headless Dergi Sitesi Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,6 +10,8 @@
     "express": "^4.18.2",
     "multer": "^1.4.5-lts.1",
     "cors": "^2.8.5",
-    "body-parser": "^1.20.2"
+    "body-parser": "^1.20.2",
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
   }
 }

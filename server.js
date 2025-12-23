@@ -34,9 +34,11 @@ if (!fs.existsSync(DATA_FILE)) {
         },
         logos: {
             bal: "/resources/bal-logo.png",
-            ballab: "/resources/ballab-logo.png", // Default placeholder path if needed
+            ballab: "/resources/ballab-logo.png", 
             corensan: "/resources/corensan-logo.png"
-        }
+        },
+        team: [],
+        teamTags: ["Editör", "Tasarım", "Yazılım", "İçerik"]
     };
     fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
 }
@@ -52,7 +54,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.get('/api/data', (req, res) => {
     fs.readFile(DATA_FILE, 'utf8', (err, data) => {
         if (err) {
-            return res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {}, logos: {} });
+            return res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {}, logos: {}, team: [], teamTags: [] });
         }
         try { 
             const json = JSON.parse(data);
@@ -61,9 +63,11 @@ app.get('/api/data', (req, res) => {
             if(!json.adminConfig) json.adminConfig = { password: "admin123" };
             if(!json.ads) json.ads = { ad1: "", ad2: "" };
             if(!json.logos) json.logos = { bal: "", ballab: "", corensan: "" };
+            if(!json.team) json.team = [];
+            if(!json.teamTags) json.teamTags = ["Editör", "Tasarım", "Yazılım"];
             res.json(json); 
         } catch (e) { 
-            res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {}, logos: {} }); 
+            res.json({ articles: [], categories: [], announcement: {}, files: [], messages: [], adminConfig: {password: "admin123"}, ads: {}, logos: {}, team: [], teamTags: [] }); 
         }
     });
 });
@@ -159,9 +163,6 @@ app.use(express.static(__dirname));
 
 // --- TEMPLATE ---
 const generateArticleHTML = (article) => {
-    // Template html generation logic remains similar but client side JS in template will handle logos via fetching data.json logic if implemented fully dynamically, 
-    // OR we can embed logos if we pass them. For simplicity, the static pages fetch data.json via index.js so the logos will update there.
-    // For specific articles, we need to ensure index.js runs and updates logos.
     return `
 <!DOCTYPE html>
 <html lang="tr">
@@ -254,6 +255,7 @@ const generateArticleHTML = (article) => {
                 <a href="/" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Anasayfa</a>
                 <a href="/about.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Hakkımızda</a>
                 <a href="/school.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Okulumuz</a>
+                <a href="/team.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Ekibimiz</a>
                 <a href="/contact.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">İletişim</a>
             </nav>
             <div id="sidebar-categories" class="pt-6 border-t border-gray-100 dark:border-gray-800"></div>
@@ -313,6 +315,7 @@ const generateArticleHTML = (article) => {
                 <a href="/about.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Hakkımızda</a>
                 <a href="/contact.html" class="text-lg font-medium hover:text-blue-600 transition-colors">İletişim</a>
                 <a href="/school.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Okulumuz</a>
+                <a href="/team.html" class="text-lg font-medium hover:text-blue-600 transition-colors">Ekibimiz</a>
                 <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 w-32 text-center">
                     <a href="https://bursaanadolulisesi.meb.k12.tr/" target="_blank" class="text-xs text-gray-500 hover:text-black dark:hover:text-white font-bold transition-colors uppercase tracking-wider">
                         Bursa Anadolu Lisesi

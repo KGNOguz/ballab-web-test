@@ -10,7 +10,9 @@ let state = {
     messages: [], 
     adminConfig: { password: 'admin123' },
     ads: { ad1: '', ad2: '' },
-    logos: { bal: '', ballab: '', corensan: '' }, // New: Logo state
+    logos: { bal: '', ballab: '', corensan: '' },
+    team: [], // New: Team members
+    teamTags: [], // New: Team tags
     isAuthenticated: false,
     darkMode: false, 
     menuOpen: false,
@@ -48,10 +50,13 @@ const initApp = async () => {
         state.adminConfig = data.adminConfig || { password: 'admin123' };
         state.ads = data.ads || { ad1: '', ad2: '' };
         state.logos = data.logos || { bal: '', ballab: '', corensan: '' };
+        state.team = data.team || [];
+        state.teamTags = data.teamTags || [];
         
         const adminApp = document.getElementById('admin-app');
         const publicApp = document.getElementById('app'); 
         const searchApp = document.getElementById('search-results'); 
+        const teamApp = document.getElementById('team-app');
 
         renderSidebarCategories();
         renderAnnouncement();
@@ -64,6 +69,8 @@ const initApp = async () => {
             renderAdmin(adminApp);
         } else if (searchApp) {
             renderSearch(searchApp);
+        } else if (teamApp) {
+            renderTeam(teamApp);
         } else if (publicApp) {
             renderHome(publicApp);
         }
@@ -89,21 +96,11 @@ const checkCookieConsent = () => {
     if (!localStorage.getItem('cookie_consent')) {
         const banner = document.createElement('div');
         banner.id = 'cookie-banner';
-        
-        // Base classes
         let classes = 'fixed z-50 bg-white dark:bg-gray-800 p-6 flex flex-col gap-4 border-gray-100 dark:border-gray-700 transform transition-all duration-700 ease-out shadow-[0_-5px_20px_rgba(0,0,0,0.15)] md:shadow-2xl ';
-        
-        // Mobile specific: Bottom sheet layout (full width, bottom-0)
         classes += 'bottom-0 left-0 right-0 w-full rounded-t-3xl border-t ';
-        
-        // Desktop specific: Floating box layout (bottom-right, fixed width)
         classes += 'md:bottom-8 md:right-8 md:left-auto md:w-96 md:rounded-2xl md:border ';
-        
-        // Initial Animation State (Hidden)
         classes += 'translate-y-full opacity-0 md:translate-y-0 md:translate-x-10';
-
         banner.className = classes;
-        
         banner.innerHTML = `
             <div class="flex items-start gap-4">
                 <div class="text-4xl animate-bounce">🍪</div>
@@ -119,8 +116,6 @@ const checkCookieConsent = () => {
             </div>
         `;
         document.body.appendChild(banner);
-
-        // Trigger Entry Animation (Remove hidden states)
         setTimeout(() => {
             banner.classList.remove('translate-y-full', 'opacity-0', 'md:translate-x-10');
         }, 500); 
@@ -131,7 +126,6 @@ window.acceptCookies = () => {
     localStorage.setItem('cookie_consent', 'true');
     const banner = document.getElementById('cookie-banner');
     if(banner) {
-        // Exit Animation (Re-apply hidden states)
         banner.classList.add('translate-y-full', 'opacity-0', 'md:translate-y-0', 'md:translate-x-10');
         setTimeout(() => banner.remove(), 700);
     }
@@ -139,7 +133,6 @@ window.acceptCookies = () => {
 
 // --- LOGO RENDERER ---
 const renderLogos = () => {
-    // Helper to safely set src
     const setSrc = (id, src) => {
         const el = document.getElementById(id);
         if(el && src) {
@@ -147,26 +140,18 @@ const renderLogos = () => {
             el.classList.remove('hidden');
         }
     };
-
-    // Navbar: Only BAL logo is image, BALLAB is text (handled in HTML)
     setSrc('nav-logo-bal', state.logos.bal);
-    
-    // Sidebar Footer Logo (Now dynamic BAL logo)
     setSrc('sidebar-logo-bal', state.logos.bal);
-    
-    // Footer: All 3 logos
     setSrc('footer-logo-bal', state.logos.bal);
     setSrc('footer-logo-ballab', state.logos.ballab);
     setSrc('footer-logo-corensan', state.logos.corensan);
-
-    // Favicon (Browser Icon)
     const favicon = document.getElementById('dynamic-favicon');
     if(favicon && state.logos.ballab) {
         favicon.href = state.logos.ballab;
     }
 };
 
-// --- PASTEL COLOR GENERATOR ---
+// --- COLOR GENERATORS ---
 window.getCategoryStyle = (name) => {
     const colors = [
         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
@@ -180,6 +165,23 @@ window.getCategoryStyle = (name) => {
         'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
         'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
         'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
+    ];
+    let sum = 0;
+    for (let i = 0; i < name.length; i++) { sum += name.charCodeAt(i); }
+    return colors[sum % colors.length];
+};
+
+window.getTeamTagColor = (name) => {
+    // Generates solid colors for the team tags as requested
+    const colors = [
+        'bg-purple-600 text-white',
+        'bg-pink-500 text-white',
+        'bg-cyan-400 text-black',
+        'bg-orange-500 text-white',
+        'bg-blue-600 text-white',
+        'bg-emerald-500 text-white',
+        'bg-rose-500 text-white',
+        'bg-indigo-500 text-white'
     ];
     let sum = 0;
     for (let i = 0; i < name.length; i++) { sum += name.charCodeAt(i); }
@@ -281,8 +283,9 @@ const renderSidebarCategories = () => {
 };
 
 // ==========================================
-// PUBLIC: HOME & SEARCH
+// PUBLIC PAGES
 // ==========================================
+
 const parseTurkishDate = (dateStr) => {
     if (!dateStr) return new Date(0);
     const months = {
@@ -406,19 +409,47 @@ const renderHome = (container) => {
                                 </a>
                             `).join('')}
                         </div>
-                        <!-- Advertisement Slot 1 -->
                         ${state.ads.ad1 ? `
                         <div class="mt-8 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                             <img src="${state.ads.ad1}" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity">
                         </div>` : ''}
-                        
-                        <!-- Advertisement Slot 2 -->
                         ${state.ads.ad2 ? `
                         <div class="mt-4 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                             <img src="${state.ads.ad2}" class="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity">
                         </div>` : ''}
                     </div>
                 </div>
+            </div>
+        </div>
+    `;
+};
+
+const renderTeam = (container) => {
+    container.innerHTML = `
+        <div class="max-w-7xl mx-auto py-8">
+            <h1 class="text-4xl font-serif font-bold mb-16 text-center">Ekibimiz</h1>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                ${state.team.map(member => `
+                    <div class="bg-gray-200 dark:bg-gray-800 relative w-full aspect-[9/10] p-6 shadow-sm hover:shadow-md transition">
+                        <!-- Name -->
+                        <h3 class="text-2xl font-serif font-bold text-center text-ink dark:text-white mb-6">${member.name}</h3>
+                        
+                        <!-- Tags Grid -->
+                        <div class="grid grid-cols-2 gap-2 mb-16">
+                            ${member.tags.map(tag => `
+                                <div class="${window.getTeamTagColor(tag)} h-8 w-full"></div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Link Box (Bottom Right) -->
+                        <a href="${member.youtubeLink || '#'}" target="_blank" class="absolute bottom-6 right-6 w-14 h-14 bg-gray-700 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="0" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                            </svg>
+                        </a>
+                    </div>
+                `).join('')}
             </div>
         </div>
     `;
@@ -498,6 +529,7 @@ const renderAdmin = (container) => {
                     ${renderAdminSidebarButton('categories', 'Kategoriler')}
                     ${renderAdminSidebarButton('files', 'Dosyalar')}
                     ${renderAdminSidebarButton('messages', 'Mesaj Kutusu')}
+                    ${renderAdminSidebarButton('team', 'Ekip Yönetimi')}
                     ${renderAdminSidebarButton('settings', 'Ayarlar')}
                 </nav>
                 <div class="p-4 border-t border-gray-200 dark:border-gray-700">
@@ -540,6 +572,7 @@ const renderAdminContent = () => {
         case 'categories': return renderCategoriesView();
         case 'files': return renderFilesView();
         case 'messages': return renderMessagesView();
+        case 'team': return renderTeamSettingsView();
         case 'settings': return renderSettingsView();
         default: return renderDashboardView();
     }
@@ -723,6 +756,64 @@ const renderMessagesView = () => `
     </div>
 `;
 
+const renderTeamSettingsView = () => `
+    <h1 class="text-3xl font-serif font-bold mb-8">Ekip Yönetimi</h1>
+    
+    <!-- Tag Management -->
+    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
+        <h2 class="text-lg font-serif font-bold mb-4">Etiket Havuzu</h2>
+        <form onsubmit="handleAddTeamTag(event)" class="flex gap-4 items-end mb-4">
+            <input name="tagName" required placeholder="Etiket Adı (Örn: Editör)" class="flex-grow p-2 bg-gray-50 dark:bg-gray-900 border rounded">
+            <button class="px-6 py-2 bg-blue-600 text-white rounded font-bold h-10">EKLE</button>
+        </form>
+        <div class="flex flex-wrap gap-2">
+            ${state.teamTags.map((tag, index) => `
+                <div class="flex items-center gap-2 px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+                    <span class="text-sm font-bold">${tag}</span>
+                    <button onclick="handleDeleteTeamTag(${index})" class="text-red-500 hover:text-red-700">×</button>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+
+    <!-- Member Management -->
+    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
+        <h2 class="text-lg font-serif font-bold mb-6">Yeni Ekip Üyesi Ekle</h2>
+        <form onsubmit="handleAddTeamMember(event)" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input name="name" required placeholder="İsim Soyisim" class="w-full p-3 bg-gray-50 dark:bg-gray-900 border rounded">
+                <input name="youtubeLink" placeholder="Youtube Bağlantısı (Opsiyonel)" class="w-full p-3 bg-gray-50 dark:bg-gray-900 border rounded">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-2">Etiketler</label>
+                <div class="flex flex-wrap gap-4 p-4 border rounded bg-gray-50 dark:bg-gray-900">
+                    ${state.teamTags.map(tag => `
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" name="tags" value="${tag}" class="rounded w-4 h-4">
+                            <span class="text-sm">${tag}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+            <button class="w-full py-3 bg-black text-white dark:bg-white dark:text-black rounded font-bold">LİSTEYE EKLE</button>
+        </form>
+    </div>
+
+    <div class="space-y-4">
+        ${state.team.map((member, index) => `
+            <div class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+                <div>
+                    <h3 class="font-bold text-lg">${member.name}</h3>
+                    <div class="flex gap-2 mt-1">
+                        ${member.tags.map(t => `<span class="text-[10px] bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded">${t}</span>`).join('')}
+                    </div>
+                </div>
+                <button onclick="handleDeleteTeamMember(${index})" class="text-xs bg-red-100 text-red-600 px-3 py-2 rounded font-bold hover:bg-red-200">Sil</button>
+            </div>
+        `).join('')}
+    </div>
+`;
+
 const renderSettingsView = () => `
     <h1 class="text-3xl font-serif font-bold mb-8">Ayarlar & Duyurular</h1>
     <div class="space-y-8 max-w-2xl">
@@ -877,7 +968,9 @@ window.saveChanges = async () => {
         messages: state.messages,
         adminConfig: state.adminConfig, 
         ads: state.ads,
-        logos: state.logos
+        logos: state.logos,
+        team: state.team,
+        teamTags: state.teamTags
     };
     try {
         const response = await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(exportData) });
@@ -973,6 +1066,45 @@ window.updateLogoUrl = (logoKey) => {
     renderAdmin(document.getElementById('admin-app'));
     renderLogos();
     alert("Logo URL güncellendi. 'KAYDET' yapmayı unutmayın.");
+};
+
+// --- TEAM HANDLERS ---
+window.handleAddTeamTag = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const tagName = formData.get('tagName');
+    if(tagName && !state.teamTags.includes(tagName)) {
+        state.teamTags.push(tagName);
+        renderAdmin(document.getElementById('admin-app'));
+    }
+};
+
+window.handleDeleteTeamTag = (index) => {
+    state.teamTags.splice(index, 1);
+    renderAdmin(document.getElementById('admin-app'));
+};
+
+window.handleAddTeamMember = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const selectedTags = [];
+    document.querySelectorAll('input[name="tags"]:checked').forEach(c => selectedTags.push(c.value));
+    
+    const newMember = {
+        name: formData.get('name'),
+        tags: selectedTags,
+        youtubeLink: formData.get('youtubeLink')
+    };
+    state.team.push(newMember);
+    renderAdmin(document.getElementById('admin-app'));
+    alert("Üye eklendi. 'KAYDET' yapmayı unutmayın.");
+};
+
+window.handleDeleteTeamMember = (index) => {
+    if(confirm("Silmek istediğinize emin misiniz?")) {
+        state.team.splice(index, 1);
+        renderAdmin(document.getElementById('admin-app'));
+    }
 };
 
 // --- EVENTS ---

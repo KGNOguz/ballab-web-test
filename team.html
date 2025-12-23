@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anasayfa - BALLAB</title>
+    <title>Ekibimiz - BALLAB</title>
     
-    <!-- Favicon (Dynamic via JS, default provided) -->
+    <!-- Favicon -->
     <link rel="icon" id="dynamic-favicon" href="/resources/ballab-logo.png">
 
     <!-- Google Fonts -->
@@ -24,28 +24,14 @@
                         sans: ['Inter', 'sans-serif'],
                         serif: ['Merriweather', 'serif'],
                     },
-                    colors: {
-                        paper: '#ffffff',
-                        ink: '#111111'
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.5s ease-out',
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0', transform: 'translateY(10px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        }
-                    }
+                    colors: { paper: '#ffffff', ink: '#111111' }
                 }
             }
         }
     </script>
     <style>
         body { -webkit-font-smoothing: antialiased; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; }
+        .clip-hexagon { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
     </style>
 </head>
 <body class="bg-paper text-ink dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 flex flex-col min-h-screen">
@@ -54,10 +40,9 @@
     <nav class="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
-                <!-- Left: Menu -->
                 <div class="flex items-center">
                      <button id="menu-btn" class="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group">
-                        <svg class="group-hover:text-blue-600 transition-colors" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        <svg class="group-hover:text-blue-600 transition-colors" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                         <span class="hidden md:inline text-sm font-medium text-gray-500 group-hover:text-blue-600">Menü</span>
                     </button>
                 </div>
@@ -74,9 +59,9 @@
                     <span class="text-2xl md:text-3xl font-serif font-black tracking-tighter pb-1">BALLAB</span>
                 </a>
                 
-                <!-- Right: Theme Toggle & Search -->
                 <div class="flex items-center gap-4">
-                    <form onsubmit="handleSearch(event)" class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1 pl-4 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all">
+                     <!-- Search Box -->
+                     <form onsubmit="handleSearch(event)" class="hidden md:flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1 pl-4 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all">
                         <input type="text" name="q" placeholder="Ara..." class="bg-transparent text-sm focus:outline-none w-32 focus:w-48 transition-all placeholder-gray-500 dark:placeholder-gray-400">
                         <button type="submit" class="bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 p-2 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors flex items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -97,13 +82,11 @@
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-80 bg-white dark:bg-gray-900 z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col border-r border-gray-100 dark:border-gray-800">
         <div class="p-6 flex justify-between items-center border-b border-gray-100 dark:border-gray-800 h-20">
             <span class="font-serif text-xl font-bold tracking-tight">Menü</span>
-            <button id="sidebar-close" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
+            <button id="sidebar-close" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
-        <div class="p-8 flex-grow overflow-y-auto custom-scrollbar">
-            <!-- Mobile Search -->
-            <form onsubmit="handleSearch(event)" class="mb-8 block md:hidden">
+        <div class="p-8 flex-grow overflow-y-auto">
+             <!-- Mobile Search -->
+             <form onsubmit="handleSearch(event)" class="mb-8 block md:hidden">
                 <div class="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-1 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all">
                     <input type="text" name="q" placeholder="İçerik ara..." class="w-full bg-transparent text-sm px-4 py-2 rounded-full focus:outline-none placeholder-gray-500">
                     <button type="submit" class="bg-gray-300 dark:bg-gray-600 px-3 py-2 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
@@ -111,34 +94,26 @@
                     </button>
                 </div>
             </form>
-
             <nav class="flex flex-col gap-4 mb-10">
-                <!-- Direct Links to HTML pages -->
                 <a href="/" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Anasayfa</a>
                 <a href="/about.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Hakkımızda</a>
                 <a href="/school.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Okulumuz</a>
                 <a href="/team.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Ekibimiz</a>
                 <a href="/contact.html" class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">İletişim</a>
             </nav>
-            <div id="sidebar-categories" class="pt-6 border-t border-gray-100 dark:border-gray-800">
-                <!-- Dynamic Categories -->
-            </div>
+             <div id="sidebar-categories" class="pt-6 border-t border-gray-100 dark:border-gray-800"></div>
         </div>
-        
         <div class="p-6 border-t border-gray-100 dark:border-gray-800">
              <div class="flex gap-4 justify-center opacity-50">
-                <!-- Sidebar Footer BAL Logo (Dynamic) -->
+                <!-- Sidebar Footer BAL Logo -->
                 <img id="sidebar-logo-bal" src="/resources/bal-logo.png" alt="BAL" class="w-8 h-8 opacity-50 hover:opacity-100 transition-opacity dark:invert object-contain">
              </div>
         </div>
     </aside>
 
-    <!-- Announcement Bar -->
-    <div id="announcement-container"></div>
-
-    <!-- Main Content -->
-    <main id="app" class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 transition-opacity duration-200">
-        <!-- Content injected via index.js -->
+    <!-- Team Content -->
+    <main id="team-app" class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 transition-opacity duration-200">
+        <!-- Content injected via index.js renderTeam -->
     </main>
 
     <!-- Footer -->

@@ -9,154 +9,152 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- SUPABASE CONFIG ---
-// Render Environment Variables kısmına bu keyleri ekleyin.
+// --- CONFIG ---
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kejuyiqrztluhsinlkqk.supabase.co';
+// Backend, yazma işlemi için Service Key kullanır.
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlanV5aXFyenRsdWhzaW5sa3FrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjUxNTA0OSwiZXhwIjoyMDgyMDkxMDQ5fQ.OhN9rdg9k6yb3JZpmml2Fr2mFmRoPbmbVqLCPHOeRe4'; 
-// DİKKAT: Backend tarafında Service Key kullanıyoruz ki yazma yetkimiz olsun.
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // --- MIDDLEWARE ---
-app.use(cors()); // Frontend Netlify'da olacağı için CORS önemli
+app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
-// --- MEMORY STORAGE FOR UPLOADS ---
-// Dosyaları diske değil RAM'e alıp oradan Supabase'e atacağız (Render disk sorunu yaşamamak için)
+// Dosyaları RAM'de tut (Render diskine yazmamak için)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// --- API ENDPOINTS ---
+// --- ENDPOINTS ---
 
-// 1. Admin Login (Basit şifre kontrolü - Config tablosundan çeker)
+// 1. Kök Dizin (Health Check)
+app.get('/', (req, res) => {
+    res.send('BALLAB Backend Çalışıyor (Supabase Storage Active).');
+});
+
+// 2. Admin Login
 app.post('/api/login', async (req, res) => {
     const { password } = req.body;
     try {
-        const { data, error } = await supabase
-            .from('site_config')
-            .select('admin_password')
-            .eq('id', 1)
-            .single();
+        const { data, error } = await supabase.from('site_config').select('admin_password').eq('id', 1).single();
+        if (error) throw error;
         
-        if (error || !data) return res.status(401).json({ success: false });
-
-        if (password === data.admin_password) {
-            res.json({ success: true });
-        } else {
-            res.status(401).json({ success: false, message: "Hatalı şifre" });
-        }
+        // Varsayılan şifre kontrolü (Eğer veritabanı boşsa)
+        const dbPass = data ? data.admin_password : 'admin';
+        
+        if (password === dbPass) res.json({ success: true });
+        else res.status(401).json({ success: false, message: "Hatalı şifre" });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        // Eğer tablo yoksa veya hata varsa geçici şifre ile kurtar
+        if(password === 'admin123') res.json({ success: true, message: "Fallback login" });
+        else res.status(500).json({ error: e.message });
     }
 });
 
-// 2. Full Sync (Admin panelinden gelen toplu kaydetme isteği)
-// Not: Frontend admin paneli hala "state" mantığıyla çalıştığı için,
-// tüm veriyi alıp ilgili tablolara dağıtıyoruz.
+// 3. Veri Eşitleme (Admin Save)
 app.post('/api/sync', async (req, res) => {
     const { articles, categories, announcement, ads, logos, team, teamTags, adminConfig } = req.body;
-
     try {
-        // A. Makaleleri Güncelle (Upsert)
-        // Articles array'ini Supabase formatına uygun hale getirelim gerekirse
+        // Articles Upsert
         if (articles && articles.length > 0) {
-            const { error: artError } = await supabase
-                .from('articles')
-                .upsert(articles); // ID çakışırsa günceller, yoksa ekler
+            const { error: artError } = await supabase.from('articles').upsert(articles);
             if (artError) throw artError;
         }
 
-        // B. Site Config Güncelle
-        const { error: confError } = await supabase
-            .from('site_config')
-            .upsert({
-                id: 1,
-                categories_list: categories,
-                announcement: announcement,
-                ads: ads,
-                logos: logos,
-                team: team,
-                team_tags: teamTags,
-                admin_password: adminConfig ? adminConfig.password : undefined
-            });
-        
+        // Config Upsert
+        const configData = {
+            id: 1,
+            categories_list: categories,
+            announcement,
+            ads,
+            logos,
+            team,
+            team_tags: teamTags
+        };
+        // Şifre değiştiyse ekle
+        if (adminConfig && adminConfig.password) {
+            configData.admin_password = adminConfig.password;
+        }
+
+        const { error: confError } = await supabase.from('site_config').upsert(configData);
         if (confError) throw confError;
 
-        res.json({ success: true, message: "Tüm veriler eşitlendi." });
+        res.json({ success: true });
     } catch (e) {
         console.error("Sync Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
 
-// 3. Delete Article
+// 4. Makale Silme
 app.delete('/api/articles/:id', async (req, res) => {
-    const { id } = req.params;
-    const { error } = await supabase.from('articles').delete().eq('id', id);
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ success: true });
+    try {
+        const { error } = await supabase.from('articles').delete().eq('id', req.params.id);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
-// 4. File Upload (Supabase Storage)
+// 5. Dosya Yükleme (Supabase Storage - 'resources' Bucket)
 app.post('/api/upload', upload.single('file'), async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'Dosya yok' });
+    if (!req.file) return res.status(400).json({ error: 'Dosya gönderilmedi' });
 
     try {
-        // Dosya ismini benzersiz yap
-        const fileExt = req.file.originalname.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        // Türkçe karakter ve boşlukları temizle
+        const safeName = req.file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+        const fileName = `${Date.now()}_${safeName}`;
 
-        const { data, error } = await supabase
-            .storage
-            .from('resources') // Supabase'de oluşturduğunuz bucket adı
+        // Storage'a yükle
+        const { data, error } = await supabase.storage
+            .from('resources')
             .upload(fileName, req.file.buffer, {
-                contentType: req.file.mimetype
+                contentType: req.file.mimetype,
+                upsert: false
             });
 
         if (error) throw error;
 
-        // Public URL oluştur
-        const { data: publicData } = supabase
-            .storage
+        // Public URL al
+        const { data: publicData } = supabase.storage
             .from('resources')
             .getPublicUrl(fileName);
 
-        res.json({ success: true, url: publicData.publicUrl });
+        res.json({ success: true, url: publicData.publicUrl, fileName: fileName });
     } catch (e) {
         console.error("Upload Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
 
-// 5. Contact Message
-app.post('/api/contact', async (req, res) => {
-    const message = req.body;
-    message.id = Date.now();
-    message.date = new Date().toLocaleDateString('tr-TR');
-    
-    const { error } = await supabase.from('messages').insert(message);
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ success: true });
-});
-
-// 6. View Count Increment (Frontend directly can't easily do atomic increments without RPC, simple update here)
+// 6. View Counter
 app.post('/api/view/:id', async (req, res) => {
     const { id } = req.params;
-    
-    // Önce mevcut değeri al
-    const { data: article } = await supabase.from('articles').select('views').eq('id', id).single();
-    if (article) {
-        const newViews = (article.views || 0) + 1;
-        await supabase.from('articles').update({ views: newViews }).eq('id', id);
-        res.json({ success: true, views: newViews });
-    } else {
-        res.status(404).json({ error: 'Not found' });
+    try {
+        const { data } = await supabase.from('articles').select('views').eq('id', id).single();
+        if (data) {
+            const newViews = (data.views || 0) + 1;
+            await supabase.from('articles').update({ views: newViews }).eq('id', id);
+            res.json({ success: true, views: newViews });
+        } else {
+            res.status(404).json({ error: 'Makale bulunamadı' });
+        }
+    } catch (e) {
+        console.log("View error (non-critical):", e.message);
+        res.json({ success: false });
     }
 });
 
-// Kök dizin (Canlı olduğunu anlamak için)
-app.get('/', (req, res) => res.send('BALLAB Backend is Live!'));
-
-app.listen(PORT, () => {
-    console.log(`Backend Server running on port ${PORT}`);
+// 7. İletişim
+app.post('/api/contact', async (req, res) => {
+    try {
+        const msg = { ...req.body, id: Date.now(), date: new Date().toLocaleDateString('tr-TR') };
+        const { error } = await supabase.from('messages').insert(msg);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

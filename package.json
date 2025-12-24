@@ -1,7 +1,7 @@
 {
   "name": "mimos-dergi",
-  "version": "2.0.0",
-  "description": "Headless Dergi Sitesi Backend",
+  "version": "2.1.0",
+  "description": "Supabase Storage Entegreli Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -6,8 +6,12 @@ const BACKEND_API_URL = "https://ballab-test.onrender.com";
 
 // --- INIT SUPABASE ---
 let supabase;
-if (typeof createClient !== 'undefined') {
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// CDN üzerinden gelen kütüphane 'supabase' global değişkenini oluşturur.
+// createClient bu objenin içindedir.
+if (window.supabase && window.supabase.createClient) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+    console.error("Supabase kütüphanesi yüklenemedi. HTML'deki script tagini kontrol edin.");
 }
 
 // --- GLOBAL STATE ---
@@ -29,21 +33,24 @@ let state = {
 
 // --- DOMContentLoaded: ENTRY POINT ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Tema Ayarla
+    console.log("Uygulama başlatılıyor...");
+
+    // 1. ÖNCE ARAYÜZÜ KUR (Kritik Düzeltme: Veri beklemenden butonları çalıştır)
+    // Tema Ayarla
     if (state.darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-
-    // 2. Cookie Kontrol
+    
+    // Cookie Kontrol
     checkCookieConsent();
 
-    // 3. Verileri Çek
+    // Event Listenerları HEMEN ekle (Menü ve butonlar için)
+    setupGlobalEvents();
+
+    // 2. SONRA VERİLERİ ÇEK
     await fetchInitialData();
 
-    // 4. Sayfaya Göre Render Et
+    // 3. EN SON İÇERİĞİ DOLDUR
     routePage();
-
-    // 5. Global Event Listenerlar
-    setupGlobalEvents();
 });
 
 // --- DATA FETCHING ---
@@ -75,14 +82,10 @@ async function fetchInitialData() {
             state.team = config.team || [];
             state.teamTags = config.team_tags || [];
         }
-
-        // Storage'dan Dosyaları Listele (Sadece Admin için gerekli ama burada çekebiliriz)
-        // Public bir bucket olduğu için listelemek sorun değil, ama şimdilik state.files boş kalsın, 
-        // admin panelinde gerekirse doldururuz.
-        
     } catch (err) {
-        console.error("Veri yükleme kritik hata:", err);
-        showErrorOnPage("Veriler sunucudan alınamadı. Lütfen sayfayı yenileyin.");
+        console.error("Veri yükleme hatası:", err);
+        // Hata olsa bile arayüzü bozma, sadece içeriği hata mesajıyla doldur
+        showErrorOnPage("Veriler sunucudan alınamadı. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.");
     }
 }
 
@@ -94,8 +97,6 @@ function routePage() {
     renderSidebarCategories();
 
     // Sayfa Spesifik Render
-    const pageId = document.body.getAttribute('id') || ''; // Body'ye id vermediysek containerlara bak
-    
     if (document.getElementById('admin-app')) {
         renderAdmin();
     } else if (document.getElementById('article-detail-container')) {
@@ -113,11 +114,70 @@ function routePage() {
 // --- ERROR HANDLING ---
 function showErrorOnPage(msg) {
     const containers = ['app', 'admin-app', 'search-results', 'team-app', 'article-detail-container'];
-    const html = `<div class="text-center py-20 text-red-500 font-bold">${msg}</div>`;
+    const html = `<div class="text-center py-20 text-red-500 font-bold px-4">${msg}</div>`;
     containers.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = html;
     });
+}
+
+// --- GLOBAL EVENT LISTENERS ---
+function setupGlobalEvents() {
+    console.log("Event listenerlar yükleniyor...");
+
+    // Menü Açma/Kapama
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const closeSidebar = document.getElementById('sidebar-close');
+
+    if(menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', () => {
+            console.log("Menü açılıyor");
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        });
+        const close = () => {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+        };
+        overlay.addEventListener('click', close);
+        if(closeSidebar) closeSidebar.addEventListener('click', close);
+    }
+    
+    // Tema Değiştirme
+    const themeBtn = document.getElementById('theme-btn');
+    if(themeBtn) themeBtn.addEventListener('click', () => {
+        state.darkMode = !state.darkMode;
+        console.log("Tema değiştirildi:", state.darkMode ? "Dark" : "Light");
+        localStorage.setItem('mimos_theme', state.darkMode ? 'dark' : 'light');
+        if (state.darkMode) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+    });
+
+    // İletişim Formu
+    window.handleSendMessage = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        try {
+            await fetch(`${BACKEND_API_URL}/api/contact`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(Object.fromEntries(fd))
+            });
+            alert("Mesajınız iletildi.");
+            e.target.reset();
+        } catch (err) {
+            alert("Mesaj gönderilemedi.");
+        }
+    };
+
+    // Arama Fonksiyonu (Global erişim için window'a atıyoruz)
+    window.handleSearch = (e) => {
+        e.preventDefault();
+        const q = new FormData(e.target).get('q');
+        if(q) window.location.href = `/search.html?q=${encodeURIComponent(q)}`;
+    };
 }
 
 // --- UI RENDERERS (COMMON) ---
@@ -566,53 +626,4 @@ function checkCookieConsent() {
         b.innerHTML = `<span>Çerez politikamızı kabul ediyor musunuz?</span> <button onclick="localStorage.setItem('cookie_consent','true');this.parentElement.remove()" class="bg-black text-white px-4 py-2 rounded">Kabul Et</button>`;
         document.body.appendChild(b);
     }
-}
-
-function setupGlobalEvents() {
-    const menuBtn = document.getElementById('menu-btn');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    const closeSidebar = document.getElementById('sidebar-close');
-
-    if(menuBtn && sidebar && overlay) {
-        menuBtn.addEventListener('click', () => {
-            sidebar.classList.remove('-translate-x-full');
-            overlay.classList.remove('opacity-0', 'pointer-events-none');
-        });
-        const close = () => {
-            sidebar.classList.add('-translate-x-full');
-            overlay.classList.add('opacity-0', 'pointer-events-none');
-        };
-        overlay.addEventListener('click', close);
-        if(closeSidebar) closeSidebar.addEventListener('click', close);
-    }
-    
-    // Theme Toggle
-    const themeBtn = document.getElementById('theme-btn');
-    if(themeBtn) themeBtn.addEventListener('click', () => {
-        state.darkMode = !state.darkMode;
-        localStorage.setItem('mimos_theme', state.darkMode ? 'dark' : 'light');
-        if (state.darkMode) document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-    });
-
-    // Search
-    window.handleSearch = (e) => {
-        e.preventDefault();
-        const q = new FormData(e.target).get('q');
-        if(q) window.location.href = `/search.html?q=${encodeURIComponent(q)}`;
-    };
-    
-    // Contact
-    window.handleSendMessage = async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
-        await fetch(`${BACKEND_API_URL}/api/contact`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify(Object.fromEntries(fd))
-        });
-        alert("Mesajınız iletildi.");
-        e.target.reset();
-    };
 }

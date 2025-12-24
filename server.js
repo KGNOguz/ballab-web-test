@@ -10,9 +10,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- CONFIG ---
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kejuyiqrztluhsinlkqk.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
 // Backend, yazma işlemi için Service Key kullanır.
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlanV5aXFyenRsdWhzaW5sa3FrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjUxNTA0OSwiZXhwIjoyMDgyMDkxMDQ5fQ.OhN9rdg9k6yb3JZpmml2Fr2mFmRoPbmbVqLCPHOeRe4'; 
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || ''; 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 

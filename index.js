@@ -6,16 +6,13 @@ const SUPABASE_URL = "https://kejuyiqrztluhsinlkqk.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlanV5aXFyenRsdWhzaW5sa3FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTUwNDksImV4cCI6MjA4MjA5MTA0OX0.R8ivp1lQwoRwNnBXR9KMWaxp_kaoShp3ZnTbALE3RNs";
 
 // DEĞİŞTİR: Backend URL (Render'daki adres)
-// Geliştirme ortamında (localhost) 'http://localhost:3000' kullanın.
-// Canlıya (Render) atınca 'https://sizin-app-ismi.onrender.com' yapın.
 const BACKEND_API_URL = "https://ballab-test.onrender.com"; 
 
-// --- INITIALIZE SUPABASE CLIENT (PUBLIC READ) ---
+// --- INITIALIZE SUPABASE CLIENT ---
 let supabase;
 if (typeof createClient !== 'undefined') {
     supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } else {
-    // Fallback in case script isn't loaded yet (though it should be)
     console.error("Supabase script loaded properly.");
 }
 
@@ -24,9 +21,9 @@ let state = {
     articles: [],
     categories: [],
     announcement: { text: '', active: false },
-    files: [], // Storage files list (We might fetch differently or keep simplified)
-    messages: [], // Fetched only for admin
-    adminConfig: { password: '' }, // Handled by backend mostly
+    files: [],
+    messages: [], 
+    adminConfig: { password: '' }, 
     ads: { ad1: '', ad2: '' },
     logos: { bal: '', ballab: '', corensan: '' },
     team: [],
@@ -39,7 +36,7 @@ let state = {
     activeAdminTab: 'dashboard'
 };
 
-// --- DATA FETCHING (HYBRID: SUPABASE DIRECT + BACKEND) ---
+// --- DATA FETCHING ---
 const initApp = async () => {
     // Theme Init
     const storedTheme = localStorage.getItem('mimos_theme');
@@ -54,9 +51,9 @@ const initApp = async () => {
     checkCookieConsent();
 
     try {
-        if(!supabase) throw new Error("Supabase Client not initialized");
+        if(!supabase) throw new Error("Supabase kütüphanesi yüklenemedi.");
 
-        // 1. Fetch Articles (Direct from Supabase)
+        // 1. Fetch Articles
         let { data: articles, error: artError } = await supabase
             .from('articles')
             .select('*')
@@ -65,14 +62,14 @@ const initApp = async () => {
         if(artError) throw artError;
         state.articles = articles || [];
 
-        // 2. Fetch Config (Direct from Supabase)
+        // 2. Fetch Config
         let { data: config, error: confError } = await supabase
             .from('site_config')
             .select('*')
             .eq('id', 1)
             .single();
 
-        if (confError && confError.code !== 'PGRST116') throw confError; // PGRST116: No rows found
+        if (confError && confError.code !== 'PGRST116') throw confError; 
 
         if (config) {
             state.categories = config.categories_list || [];
@@ -97,8 +94,6 @@ const initApp = async () => {
         if (adminApp) {
             if(sessionStorage.getItem('admin_auth') === 'true') {
                 state.isAuthenticated = true;
-                // If admin, we might need messages, fetched via backend usually or direct if RLS allows
-                // For simplicity/security, let's keep messages hidden or require backend call
             }
             renderAdmin(adminApp);
         } else if (searchApp) {
@@ -113,14 +108,28 @@ const initApp = async () => {
         
     } catch (error) {
         console.error("Veri yükleme hatası:", error);
-        // Error UI logic...
-        const errorHTML = `<p class="text-center p-10 text-red-500">Veriler yüklenemedi. Lütfen bağlantınızı kontrol edin.</p>`;
-        const publicApp = document.getElementById('app');
-        if(publicApp) publicApp.innerHTML = errorHTML;
+        
+        // HATA MESAJINI EKRANA BASMA (TÜM SAYFALAR İÇİN)
+        const errorHTML = `
+            <div class="flex flex-col items-center justify-center py-20 px-4 text-center">
+                <div class="text-red-500 font-bold text-xl mb-2">Veriler Yüklenemedi</div>
+                <p class="text-gray-500 mb-4 max-w-md">Veritabanı bağlantısında bir sorun oluştu veya tablolar henüz oluşturulmadı.</p>
+                <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded text-xs font-mono text-left overflow-auto max-w-full">
+                    Hata Kodu: ${error.message || error.code || 'Bilinmiyor'}
+                </div>
+                <button onclick="location.reload()" class="mt-6 px-6 py-2 bg-black text-white dark:bg-white dark:text-black rounded-full font-bold">Tekrar Dene</button>
+            </div>
+        `;
+
+        const ids = ['app', 'admin-app', 'search-results', 'team-app', 'article-detail-container'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.innerHTML = errorHTML;
+        });
     }
 };
 
-// --- COOKIE CONSENT (Same as before) ---
+// --- COOKIE CONSENT ---
 const checkCookieConsent = () => {
     if (!localStorage.getItem('cookie_consent')) {
         const banner = document.createElement('div');
@@ -160,7 +169,7 @@ window.acceptCookies = () => {
     }
 };
 
-// --- LOGO & UI RENDERERS (Same as before) ---
+// --- LOGO & UI RENDERERS ---
 const renderLogos = () => {
     const setSrc = (id, src) => {
         const el = document.getElementById(id);
@@ -295,26 +304,8 @@ const renderSidebarCategories = () => {
 };
 
 // ==========================================
-// PUBLIC PAGES (READING)
+// PUBLIC PAGES
 // ==========================================
-
-const parseTurkishDate = (dateStr) => {
-    if (!dateStr) return new Date(0);
-    const months = {
-        'ocak': 0, 'şubat': 1, 'mart': 2, 'nisan': 3, 'mayıs': 4, 'haziran': 5,
-        'temmuz': 6, 'ağustos': 7, 'eylül': 8, 'ekim': 9, 'kasım': 10, 'aralık': 11
-    };
-    try {
-        const parts = dateStr.toLowerCase().split(' ');
-        if(parts.length === 3) {
-            const day = parseInt(parts[0]);
-            const month = months[parts[1]] || 0;
-            const year = parseInt(parts[2]);
-            return new Date(year, month, day);
-        }
-    } catch(e) { }
-    return new Date(0);
-}
 
 const renderHome = (container) => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -332,15 +323,9 @@ const renderHome = (container) => {
         pageTitle = `Arşiv: ${yearFilter}`;
     }
 
-    const now = new Date();
-    displayArticles.sort((a, b) => {
-        // Simple sorting for now
-        return (b.id) - (a.id);
-    });
+    displayArticles.sort((a, b) => (b.id) - (a.id));
     
-    // Discovery: Random 4
     const discovery = [...state.articles].sort(() => 0.5 - Math.random()).slice(0, 4);
-    
     const visibleArticles = displayArticles.slice(0, state.visibleCount);
     const hasMore = state.visibleCount < displayArticles.length;
 
